@@ -41,7 +41,7 @@
       <artifactId>spring-boot-starter-security</artifactId>
     </dependency>
 
-    <!-- ✅ Validação (para @NotBlank, @Email, etc.) -->
+    <!-- Validação (para @NotBlank, @Email, etc.) -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-validation</artifactId>
