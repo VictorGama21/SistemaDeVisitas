@@ -2,7 +2,7 @@ package com.inter.SistemaDeVisitas.controller;
 
 import com.inter.SistemaDeVisitas.entity.RoleGroup;
 import com.inter.SistemaDeVisitas.entity.User;
-import com.inter.SistemaDeVisitas.repository.UserRepository;
+import com.inter.SistemaDeVisitas.repo.UserRepository;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.security.crypto.password.PasswordEncoder;
