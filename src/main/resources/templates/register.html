@@ -21,7 +21,7 @@
           <div th:if="${error}" class="alert alert-danger py-2" th:text="${error}">Erro</div>
 
           <form th:action="@{/register}" method="post" autocomplete="on">
-            <!-- CSRF obrigatório com Security CSRF ativo -->
+            <!-- CSRF -->
             <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
 
             <div class="mb-3">
@@ -41,9 +41,15 @@
               <input type="password" name="password" class="form-control form-control-lg" required>
             </div>
 
-            <div class="mb-4">
+            <div class="mb-3">
               <label class="form-label">Confirmar senha</label>
               <input type="password" name="confirmPassword" class="form-control form-control-lg" required>
+            </div>
+
+            <div class="mb-4">
+              <label class="form-label">Token de cadastro</label>
+              <input type="text" name="registrationToken" class="form-control form-control-lg" required
+                     placeholder="Cole aqui o token fornecido pelo administrador (SUPER)">
             </div>
 
             <button type="submit" class="btn btn-success btn-lg w-100">Cadastrar</button>
