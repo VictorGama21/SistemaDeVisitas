@@ -1,0 +1,53 @@
+<!-- src/main/resources/templates/fragments/layout.html -->
+<!doctype html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title th:text="${pageTitle} ?: 'Sistema de Visitas'">Sistema de Visitas</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link th:href="@{/css/app.css}" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<nav class="navbar navbar-expand-lg navbar-dark" style="background:#f58220;">
+  <div class="container-fluid">
+    <a class="navbar-brand fw-semibold" th:href="@{/home}">SV</a>
+    <form class="d-none d-md-flex" role="search">
+      <input class="form-control" type="search" placeholder="Pesquisar..." aria-label="Search">
+    </form>
+    <div class="d-flex gap-2">
+      <a class="btn btn-sm btn-light" th:href="@{/logout}">Sair</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar -->
+    <aside class="col-12 col-md-3 col-lg-2 border-end bg-white min-vh-100 p-0">
+      <div class="list-group list-group-flush">
+        <a th:href="@{/home}" class="list-group-item list-group-item-action">Dashboard</a>
+        <a href="#" class="list-group-item list-group-item-action">Visitas</a>
+        <a href="#" class="list-group-item list-group-item-action">Clientes</a>
+        <a href="#" class="list-group-item list-group-item-action">Relatórios</a>
+
+        <!-- menu admin -->
+        <div sec:authorize="hasAnyRole('ADMIN','SUPER')">
+          <div class="list-group-item small text-muted">Administração</div>
+          <a th:href="@{/admin/tokens}" class="list-group-item list-group-item-action">Tokens de cadastro</a>
+          <a href="#" class="list-group-item list-group-item-action">Usuários</a>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Conteúdo -->
+    <main class="col-12 col-md-9 col-lg-10 p-3">
+      <div th:insert="~{::content}"></div>
+    </main>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
