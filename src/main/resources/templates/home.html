@@ -1,49 +1,41 @@
+<!-- src/main/resources/templates/home.html -->
 <!doctype html>
-<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Home - Sistema de Visitas</title>
-  <!-- Bootstrap CSS CDN -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body {
-      background-color: #f8f9fa;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      font-family: 'Segoe UI', sans-serif;
-    }
-    .card {
-      padding: 2rem;
-      border-radius: 12px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-      text-align: center;
-      max-width: 400px;
-      width: 100%;
-      background-color: #ffffff;
-    }
-    h1 {
-      margin-bottom: 1rem;
-      color: #0d6efd;
-    }
-    .btn-logout {
-      margin-top: 1rem;
-    }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <h1>⚡️ Logado!</h1>
-    <p>Bem-vindo ao <strong>Sistema de Visitas</strong>.</p>
-    <form th:action="@{/logout}" method="post">
-      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-      <button type="submit" class="btn btn-danger btn-logout">Sair</button>
-    </form>
-  </div>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+  <th:block th:replace="~{fragments/layout :: content}">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <h4 class="mb-0">Painel</h4>
+      <span class="badge text-bg-secondary" sec:authentication="name">user</span>
+    </div>
 
-  <!-- Bootstrap JS Bundle (Popper + JS) -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-</body>
+    <div class="alert alert-warning" role="alert">
+      Receba notificações na área de trabalho, <a href="#" class="alert-link">ative as notificações</a>.
+    </div>
+
+    <div class="row g-3">
+      <div class="col-sm-6 col-lg-3">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <div class="small text-muted">Visitas hoje</div>
+            <div class="fs-3 fw-semibold">12</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-lg-3">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <div class="small text-muted">Clientes ativos</div>
+            <div class="fs-3 fw-semibold">342</div>
+          </div>
+        </div>
+      </div>
+      <!-- cards extras -->
+    </div>
+
+    <!-- seção rápida para admin -->
+    <div class="mt-4" sec:authorize="hasAnyRole('ADMIN','SUPER')">
+      <h5>Atalhos do administrador</h5>
+      <a class="btn btn-outline-primary btn-sm" th:href="@{/admin/tokens}">Gerenciar tokens</a>
+    </div>
+  </th:block>
 </html>
