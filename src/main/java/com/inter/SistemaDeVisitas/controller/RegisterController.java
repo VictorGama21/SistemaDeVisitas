@@ -21,15 +21,16 @@ import java.time.Instant;
 public class RegisterController {
 
     private final UserRepository users;
-    private final RegistrationTokenRepository tokens;
     private final PasswordEncoder passwordEncoder;
+    private final RegistrationTokenRepository tokens; // <-- CAMPO AQUI
 
+    // <-- CONSTRUTOR AQUI
     public RegisterController(UserRepository users,
-                              RegistrationTokenRepository tokens,
-                              PasswordEncoder passwordEncoder) {
+                              PasswordEncoder passwordEncoder,
+                              RegistrationTokenRepository tokens) {
         this.users = users;
-        this.tokens = tokens;
         this.passwordEncoder = passwordEncoder;
+        this.tokens = tokens;
     }
 
     @GetMapping("/register")
@@ -43,18 +44,17 @@ public class RegisterController {
             @Email String email,
             @NotBlank String password,
             @NotBlank String confirmPassword,
-            @NotBlank String registrationToken,
+            @NotBlank String inviteToken, // campo do formulário
             Model model
     ) {
-        // 1) valida senhas
+        // validações simples
         if (!password.equals(confirmPassword)) {
-            model.addAttribute("error", "As senhas não conferem.");
+            model.addAttribute("error", "As senhas não coincidem.");
             model.addAttribute("fullName", fullName);
             model.addAttribute("email", email);
             return "register";
         }
 
-        // 2) verifica se e-mail já existe
         if (users.findByEmail(email).isPresent()) {
             model.addAttribute("error", "E-mail já cadastrado.");
             model.addAttribute("fullName", fullName);
@@ -62,50 +62,36 @@ public class RegisterController {
             return "register";
         }
 
-        // 3) valida token
-        var now = Instant.now();
-        RegistrationToken token = tokens.findByToken(registrationToken).orElse(null);
-        if (token == null) {
+        // valida token
+        var opt = tokens.findByToken(inviteToken);
+        if (opt.isEmpty()) {
             model.addAttribute("error", "Token inválido.");
             model.addAttribute("fullName", fullName);
             model.addAttribute("email", email);
             return "register";
         }
-        if (token.isUsed()) {
-            model.addAttribute("error", "Token já utilizado.");
-            model.addAttribute("fullName", fullName);
-            model.addAttribute("email", email);
-            return "register";
-        }
-        if (token.getExpiresAt() == null || token.getExpiresAt().isBefore(now)) {
-            model.addAttribute("error", "Token expirado.");
-            model.addAttribute("fullName", fullName);
-            model.addAttribute("email", email);
-            return "register";
-        }
-        // Por regra de negócio, só ADMIN/LOJA via token
-        RoleGroup allowed = token.getRoleGroupAllowed();
-        if (allowed == null || allowed == RoleGroup.SUPER) {
-            model.addAttribute("error", "Token inválido para cadastro.");
+
+        RegistrationToken t = opt.get();
+        if (t.isUsed() || t.getExpiresAt().isBefore(Instant.now())) {
+            model.addAttribute("error", "Token expirado ou já utilizado.");
             model.addAttribute("fullName", fullName);
             model.addAttribute("email", email);
             return "register";
         }
 
-        // 4) cria usuário com role do token e marca token como usado
+        // cria usuário com o role permitido pelo token
         User u = new User();
         u.setFullName(fullName);
         u.setEmail(email);
         u.setPassword(passwordEncoder.encode(password));
-        u.setRoleGroup(allowed); // ADMIN ou LOJA vindos do token
+        u.setRoleGroup(t.getRoleGroupAllowed());
         u.setEnabled(true);
-
         users.save(u);
 
-        token.setUsed(true);
-        tokens.save(token);
+        // marca token como usado
+        t.setUsed(true);
+        tokens.save(t);
 
-        // 5) sucesso
         return "redirect:/login?registered";
     }
 }
