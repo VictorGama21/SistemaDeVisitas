@@ -1,6 +1,7 @@
 <!-- src/main/resources/templates/fragments/layout.html -->
 <!doctype html>
-<html lang="pt-br" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:fragment="layout(content)">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -41,9 +42,10 @@
       </div>
     </aside>
 
-    <!-- Conteúdo principal -->
-    <main class="col-12 col-md-9 col-lg-10 p-3" th:fragment="content">
-      <div th:insert="~{::content}"></div>
+    <!-- Conteúdo -->
+    <main class="col-12 col-md-9 col-lg-10 p-3">
+      <!-- Aqui entra o conteúdo da página filha -->
+      <div th:insert="${content}"></div>
     </main>
   </div>
 </div>
