@@ -1,56 +1,86 @@
 <!-- src/main/resources/templates/admin/tokens.html -->
 <!doctype html>
-<html xmlns:th="http://www.thymeleaf.org"
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
-  <th:block th:replace="~{fragments/layout :: content}">
-    <div class="d-flex align-items-center justify-content-between mb-3">
-      <h4 class="mb-0">Tokens de cadastro</h4>
-      <div class="d-flex gap-2">
-        <form th:action="@{/admin/tokens/generate}" method="post" class="d-flex gap-2">
-          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
-          <select class="form-select form-select-sm" name="role" required>
-            <option th:each="r : ${roles}" th:value="${r}" th:text="${r}">ADMIN</option>
-          </select>
-          <input class="form-control form-control-sm" type="number" name="days" value="7" min="1" max="365">
-          <button class="btn btn-success btn-sm" type="submit">Gerar</button>
-        </form>
+  <th:block th:replace="~{fragments/layout :: layout(~{::content})}">
+    <th:block th:fragment="content">
+
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <h4 class="mb-0">Tokens de cadastro</h4>
+        <span class="badge text-bg-secondary">Admin</span>
       </div>
-    </div>
 
-    <div th:if="${param.created}" class="alert alert-success py-2">Token criado.</div>
-    <div th:if="${param.revoked}" class="alert alert-warning py-2">Token revogado.</div>
+      <div th:if="${param.created}" class="alert alert-success py-2">Token gerado com sucesso.</div>
+      <div th:if="${param.revoked}" class="alert alert-warning py-2">Token revogado.</div>
 
-    <div class="table-responsive">
-      <table class="table align-middle">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Token</th>
-            <th>Role permitido</th>
-            <th>Expira</th>
-            <th>Usado</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr th:each="t : ${tokens}">
-            <td th:text="${t.id}">1</td>
-            <td><code th:text="${t.token}">abc...</code></td>
-            <td th:text="${t.roleGroupAllowed}">ADMIN</td>
-            <td th:text="${#temporals.format(t.expiresAt, 'dd/MM/yyyy HH:mm')}">01/01/2026</td>
-            <td>
-              <span th:classappend="${t.used} ? 'badge text-bg-secondary' : 'badge text-bg-success'"
-                    th:text="${t.used} ? 'Sim' : 'Não'">Não</span>
-            </td>
-            <td class="text-end">
-              <form th:if="${!t.used}" th:action="@{'/admin/tokens/' + ${t.id} + '/revoke'}" method="post">
-                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
-                <button class="btn btn-outline-danger btn-sm" type="submit">Revogar</button>
-              </form>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+      <!-- Gerar token (POST /admin/tokens/generate) -->
+      <div class="card mb-3">
+        <div class="card-body">
+          <form th:action="@{/admin/tokens/generate}" method="post" class="row g-2 align-items-end">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+            <div class="col-sm-4">
+              <label class="form-label">Grupo permitido</label>
+              <!-- O controller manda modelAttribute 'roles' -->
+              <select class="form-select" name="role" required>
+                <option th:each="r : ${roles}" th:value="${r}" th:text="${r}">LOJA</option>
+              </select>
+            </div>
+
+            <div class="col-sm-3">
+              <label class="form-label">Validade (dias)</label>
+              <input class="form-control" type="number" name="days" min="1" max="365" value="7">
+            </div>
+
+            <div class="col-sm-3">
+              <button type="submit" class="btn btn-success w-100">Gerar token</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Lista -->
+      <div class="card">
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table align-middle">
+              <thead>
+              <tr>
+                <th>#</th>
+                <th>Token</th>
+                <th>Grupo</th>
+                <th>Expira em</th>
+                <th>Usado</th>
+                <th>Ações</th>
+              </tr>
+              </thead>
+              <tbody>
+              <tr th:each="t, i : ${tokens}">
+                <td th:text="${i.index + 1}">1</td>
+                <td><code th:text="${t.token}">abc</code></td>
+                <td th:text="${t.roleGroupAllowed}">LOJA</td>
+                <td th:text="${#temporals.format(t.expiresAt,'dd/MM/yyyy HH:mm')}">01/01/2026</td>
+                <td>
+                  <span th:classappend="${t.used} ? 'badge text-bg-secondary' : 'badge text-bg-success'"
+                        th:text="${t.used} ? 'Sim' : 'Não'">Não</span>
+                </td>
+                <td class="d-flex gap-1">
+                  <!-- Revoke: POST /admin/tokens/{id}/revoke -->
+                  <form th:action="@{|/admin/tokens/${t.id}/revoke|}" method="post" th:if="${!t.used}">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                    <button class="btn btn-outline-warning btn-sm" type="submit">Revogar</button>
+                  </form>
+                </td>
+              </tr>
+              <tr th:if="${#lists.isEmpty(tokens)}">
+                <td colspan="6" class="text-muted">Nenhum token cadastrado.</td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </th:block>
   </th:block>
 </html>
