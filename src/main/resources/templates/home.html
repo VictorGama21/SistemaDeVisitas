@@ -2,40 +2,44 @@
 <!doctype html>
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
-  <th:block th:replace="~{fragments/layout :: content}">
-    <div class="d-flex align-items-center justify-content-between mb-3">
-      <h4 class="mb-0">Painel</h4>
-      <span class="badge text-bg-secondary" sec:authentication="name">user</span>
-    </div>
+  <!-- Chama o layout e injeta o fragmento "content" desta página -->
+  <th:block th:replace="~{fragments/layout :: layout(~{::content})}">
 
-    <div class="alert alert-warning" role="alert">
-      Receba notificações na área de trabalho, <a href="#" class="alert-link">ative as notificações</a>.
-    </div>
+    <!-- Este é o fragmento que será injetado dentro do layout -->
+    <th:block th:fragment="content">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <h4 class="mb-0">Painel</h4>
+        <span class="badge text-bg-secondary" sec:authentication="name">user</span>
+      </div>
 
-    <div class="row g-3">
-      <div class="col-sm-6 col-lg-3">
-        <div class="card shadow-sm">
-          <div class="card-body">
-            <div class="small text-muted">Visitas hoje</div>
-            <div class="fs-3 fw-semibold">12</div>
+      <div class="alert alert-warning" role="alert">
+        Receba notificações na área de trabalho, <a href="#" class="alert-link">ative as notificações</a>.
+      </div>
+
+      <div class="row g-3">
+        <div class="col-sm-6 col-lg-3">
+          <div class="card shadow-sm">
+            <div class="card-body">
+              <div class="small text-muted">Visitas hoje</div>
+              <div class="fs-3 fw-semibold">12</div>
+            </div>
           </div>
         </div>
-      </div>
-      <div class="col-sm-6 col-lg-3">
-        <div class="card shadow-sm">
-          <div class="card-body">
-            <div class="small text-muted">Clientes ativos</div>
-            <div class="fs-3 fw-semibold">342</div>
+        <div class="col-sm-6 col-lg-3">
+          <div class="card shadow-sm">
+            <div class="card-body">
+              <div class="small text-muted">Clientes ativos</div>
+              <div class="fs-3 fw-semibold">342</div>
+            </div>
           </div>
         </div>
+        <!-- cards extras -->
       </div>
-      <!-- cards extras -->
-    </div>
 
-    <!-- seção rápida para admin -->
-    <div class="mt-4" sec:authorize="hasAnyRole('ADMIN','SUPER')">
-      <h5>Atalhos do administrador</h5>
-      <a class="btn btn-outline-primary btn-sm" th:href="@{/admin/tokens}">Gerenciar tokens</a>
-    </div>
+      <div class="mt-4" sec:authorize="hasAnyRole('ADMIN','SUPER')">
+        <h5>Atalhos do administrador</h5>
+        <a class="btn btn-outline-primary btn-sm" th:href="@{/admin/tokens}">Gerenciar tokens</a>
+      </div>
+    </th:block>
   </th:block>
 </html>
