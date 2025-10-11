@@ -1,4 +1,6 @@
 package com.inter.SistemaDeVisitas.entity;
+import com.inter.SistemaDeVisitas.repo.RegistrationTokenRepository;
+import com.inter.SistemaDeVisitas.entity.RegistrationToken; // (se usar diretamente)
 
 import jakarta.persistence.*;
 import java.time.Instant;
