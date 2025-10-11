@@ -1,6 +1,4 @@
 package com.inter.SistemaDeVisitas.entity;
-import com.inter.SistemaDeVisitas.repo.RegistrationTokenRepository;
-import com.inter.SistemaDeVisitas.entity.RegistrationToken; // (se usar diretamente)
 
 import jakarta.persistence.*;
 import java.time.Instant;
@@ -31,7 +29,6 @@ public class RegistrationToken {
     @Column(nullable = false)
     private boolean used = false;
 
-    // === CONSTRUTORES ===
     public RegistrationToken() {}
 
     public RegistrationToken(String token, RoleGroup roleGroupAllowed, Instant expiresAt) {
@@ -41,44 +38,20 @@ public class RegistrationToken {
         this.used = false;
     }
 
-    // === GETTERS & SETTERS ===
-    public Long getId() {
-        return id;
-    }
+    public Long getId() { return id; }
 
-    public String getToken() {
-        return token;
-    }
+    public String getToken() { return token; }
+    public void setToken(String token) { this.token = token; }
 
-    public void setToken(String token) {
-        this.token = token;
-    }
+    public RoleGroup getRoleGroupAllowed() { return roleGroupAllowed; }
+    public void setRoleGroupAllowed(RoleGroup roleGroupAllowed) { this.roleGroupAllowed = roleGroupAllowed; }
 
-    public RoleGroup getRoleGroupAllowed() {
-        return roleGroupAllowed;
-    }
+    public Instant getExpiresAt() { return expiresAt; }
+    public void setExpiresAt(Instant expiresAt) { this.expiresAt = expiresAt; }
 
-    public void setRoleGroupAllowed(RoleGroup roleGroupAllowed) {
-        this.roleGroupAllowed = roleGroupAllowed;
-    }
+    public boolean isUsed() { return used; }
+    public void setUsed(boolean used) { this.used = used; }
 
-    public Instant getExpiresAt() {
-        return expiresAt;
-    }
-
-    public void setExpiresAt(Instant expiresAt) {
-        this.expiresAt = expiresAt;
-    }
-
-    public boolean isUsed() {
-        return used;
-    }
-
-    public void setUsed(boolean used) {
-        this.used = used;
-    }
-
-    // === MÉTODOS UTILITÁRIOS ===
     @Transient
     public boolean isExpired() {
         return expiresAt != null && expiresAt.isBefore(Instant.now());
