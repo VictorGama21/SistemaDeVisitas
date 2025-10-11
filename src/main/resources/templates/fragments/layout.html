@@ -11,7 +11,8 @@
 </head>
 <body class="bg-light">
 
-<nav class="navbar navbar-expand-lg navbar-dark" style="background:#f58220;">
+<!-- altere a cor aqui -->
+<nav class="navbar navbar-expand-lg navbar-dark" style="background:#2e7d32;"> <!-- verde -->
   <div class="container-fluid">
     <a class="navbar-brand fw-semibold" th:href="@{/home}">SV</a>
     <form class="d-none d-md-flex" role="search">
@@ -29,22 +30,24 @@
     <aside class="col-12 col-md-3 col-lg-2 border-end bg-white min-vh-100 p-0">
       <div class="list-group list-group-flush">
         <a th:href="@{/home}" class="list-group-item list-group-item-action">Dashboard</a>
-        <a href="#" class="list-group-item list-group-item-action">Visitas</a>
-        <a href="#" class="list-group-item list-group-item-action">Clientes</a>
-        <a href="#" class="list-group-item list-group-item-action">Relatórios</a>
 
-        <!-- menu admin -->
+        <!-- área do LOJA -->
+        <div sec:authorize="hasRole('LOJA')">
+          <a th:href="@{/visitas}" class="list-group-item list-group-item-action">Minhas visitas</a>
+        </div>
+
+        <!-- menu admin/super -->
         <div sec:authorize="hasAnyRole('ADMIN','SUPER')">
           <div class="list-group-item small text-muted">Administração</div>
           <a th:href="@{/admin/tokens}" class="list-group-item list-group-item-action">Tokens de cadastro</a>
-          <a href="#" class="list-group-item list-group-item-action">Usuários</a>
+          <a th:href="@{/admin/lojas}" class="list-group-item list-group-item-action">Lojas</a>
+          <a th:href="@{/admin/usuarios}" class="list-group-item list-group-item-action">Usuários</a>
         </div>
       </div>
     </aside>
 
     <!-- Conteúdo -->
     <main class="col-12 col-md-9 col-lg-10 p-3">
-      <!-- Aqui entra o conteúdo da página filha -->
       <div th:insert="${content}"></div>
     </main>
   </div>
