@@ -1,0 +1,15 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+  <th:block th:replace="~{fragments/layout :: layout(~{::content})}">
+    <th:block th:fragment="content">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <h4 class="mb-0">Minhas visitas</h4>
+      </div>
+
+      <div class="alert alert-info" role="alert">
+        O acompanhamento de visitas ainda está em desenvolvimento.
+        Você conseguirá registrar visitas assim que a funcionalidade for liberada.
+      </div>
+    </th:block>
+  </th:block>
