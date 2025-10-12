@@ -16,21 +16,35 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+            // CORS/CSRF: deixa CSRF habilitado (padrão) — seus forms já enviam o token
             .cors(Customizer.withDefaults())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/", "/login", "/register", "/img/**", "/css/**", "/js/**", "/actuator/health").permitAll()
+                // público
+                .requestMatchers("/", "/login", "/register",
+                                 "/favicon.ico",
+                                 "/img/**", "/css/**", "/js/**",
+                                 "/actuator/health").permitAll()
+
+                // admin + super
                 .requestMatchers("/admin/**").hasAnyRole("ADMIN", "SUPER")
-                .requestMatchers("/visitas/**").hasRole("LOJA")
+
+                // área da loja (loja vê; admin/super também podem)
+                .requestMatchers("/loja/**").hasAnyRole("LOJA", "ADMIN", "SUPER")
+
+                // home autenticado
                 .requestMatchers(HttpMethod.GET, "/home").authenticated()
+
+                // qualquer outra rota: autenticado
                 .anyRequest().authenticated()
             )
             .formLogin(form -> form
-                .loginPage("/login")
-                .loginProcessingUrl("/login")
+                .loginPage("/login")            // GET para exibir a página
+                .loginProcessingUrl("/login")   // POST do formulário
                 .defaultSuccessUrl("/home", true)
                 .failureUrl("/login?error")
                 .permitAll()
             )
+            // Logout por POST (use <form method="post" action="/logout"> + CSRF)
             .logout(l -> l
                 .logoutUrl("/logout")
                 .logoutSuccessUrl("/login?logout")
