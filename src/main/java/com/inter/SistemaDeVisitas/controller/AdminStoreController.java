@@ -2,6 +2,7 @@ package com.inter.SistemaDeVisitas.controller;
 
 import com.inter.SistemaDeVisitas.entity.Store;
 import com.inter.SistemaDeVisitas.repo.StoreRepository;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -11,6 +12,7 @@ import jakarta.validation.Valid;
 
 @Controller
 @RequestMapping("/admin/stores")
+@PreAuthorize("hasAnyRole('ADMIN','SUPER')")
 public class AdminStoreController {
 
     private final StoreRepository stores;
@@ -43,7 +45,21 @@ public class AdminStoreController {
         if (bindingResult.hasErrors()) {
             model.addAttribute("stores", stores.findAllByOrderByNameAsc());
             model.addAttribute("filter", "todos");
+            model.addAttribute("formStore", store);
             return "admin/stores";
+        }
+        String trimmedName = store.getName() != null ? store.getName().trim() : null;
+        store.setName(trimmedName);
+        if (trimmedName == null || trimmedName.isEmpty()) {
+            bindingResult.rejectValue("name", "store.name.blank", "Informe o nome da loja");
+            model.addAttribute("stores", stores.findAllByOrderByNameAsc());
+            model.addAttribute("filter", "todos");
+            model.addAttribute("formStore", store);
+            return "admin/stores";
+        }
+        if (store.getCnpj() != null) {
+            String trimmedCnpj = store.getCnpj().trim();
+            store.setCnpj(trimmedCnpj.isEmpty() ? null : trimmedCnpj);
         }
         stores.save(store);
         return "redirect:/admin/stores";
