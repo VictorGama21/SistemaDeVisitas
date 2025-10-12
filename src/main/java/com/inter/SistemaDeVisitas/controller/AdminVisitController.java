@@ -7,6 +7,7 @@ import com.inter.SistemaDeVisitas.repo.StoreRepository;
 import com.inter.SistemaDeVisitas.repo.UserRepository;
 import com.inter.SistemaDeVisitas.repo.VisitRepository;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -18,6 +19,7 @@ import java.util.List;
 
 @Controller
 @RequestMapping("/admin/visitas")
+@PreAuthorize("hasAnyRole('ADMIN','SUPER')")
 public class AdminVisitController {
 
     private final VisitRepository visits;
