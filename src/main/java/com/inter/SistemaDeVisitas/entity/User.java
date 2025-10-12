@@ -27,6 +27,10 @@ public class User {
     @Column(nullable=false)
     private boolean enabled = true;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "store_id")
+    private Store store;
+
     @Column(nullable=false, updatable = false)
     private Instant createdAt = Instant.now();
 
@@ -48,6 +52,9 @@ public class User {
 
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
+
+    public Store getStore() { return store; }
+    public void setStore(Store store) { this.store = store; }
 
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
