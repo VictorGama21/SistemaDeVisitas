@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 @Controller
 @RequestMapping("/admin/users")
+@PreAuthorize("hasAnyRole('ADMIN','SUPER')")
 public class AdminUserController {
 
     private final UserRepository users;
