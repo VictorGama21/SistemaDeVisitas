@@ -1,6 +1,8 @@
 package com.inter.SistemaDeVisitas.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import java.time.Instant;
 
 @Entity
@@ -9,9 +11,12 @@ public class Store {
   @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
+  @NotBlank(message = "Informe o nome da loja")
+  @Size(max = 120, message = "O nome da loja deve ter no máximo 120 caracteres")
   @Column(nullable = false, length = 120)
   private String name;
 
+  @Size(max = 32, message = "O CNPJ deve ter no máximo 32 caracteres")
   @Column(length = 32)
   private String cnpj;
 
