@@ -69,7 +69,10 @@ public class HomeController {
       visitasHoje = visitRepository.countByScheduledAtBetween(startOfDay, endOfDay);
       clientesAtivos = userRepository.countByRoleGroupAndEnabledTrue(RoleGroup.LOJA);
 
-      String filter = Optional.ofNullable(storeStatusFilter).orElse("ativos");
+      String filter = Optional.ofNullable(storeStatusFilter)
+          .map(String::trim)
+          .filter(s -> !s.isEmpty())
+          .orElse("ativos");
       List<Store> stores = switch (filter) {
         case "inativos" -> storeRepository.findByActiveFalseOrderByNameAsc();
         case "todos" -> storeRepository.findAllByOrderByNameAsc();
