@@ -26,7 +26,7 @@
       <input class="form-control" type="search" placeholder="Pesquisar..." aria-label="Search">
     </form>
 
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2" sec:authorize="isAuthenticated()">
       <!-- Botão sair com CSRF -->
       <form th:action="@{/logout}" method="post" class="m-0">
         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
@@ -40,7 +40,7 @@
 <div class="container-fluid">
   <div class="row">
     <!-- Sidebar -->
-    <aside class="col-12 col-md-3 col-lg-2 border-end bg-white min-vh-100 p-0">
+    <aside class="col-12 col-md-3 col-lg-2 border-end bg-white min-vh-100 p-0" sec:authorize="isAuthenticated()">
       <div class="list-group list-group-flush">
 
         <!-- Dashboard comum -->
@@ -50,6 +50,7 @@
 
         <!-- Menu da loja -->
         <div sec:authorize="hasAnyRole('LOJA','ADMIN','SUPER')">
+        <div sec:authorize="hasRole('LOJA')">
           <div class="list-group-item small text-muted">Operação</div>
           <a th:href="@{/loja/visitas}" class="list-group-item list-group-item-action">
             Minhas visitas
@@ -62,13 +63,7 @@
           <a th:href="@{/admin/tokens}" class="list-group-item list-group-item-action">
             Tokens de cadastro
           </a>
-          <a th:href="@{/admin/stores}" class="list-group-item list-group-item-action">
-            Lojas
-          </a>
-          <a th:href="@{/admin/visits}" class="list-group-item list-group-item-action">
-            Agendar visitas
-          </a>
-          <a th:href="@{/admin/usuarios}" class="list-group-item list-group-item-action">
+          <a th:href="@{/admin/users}" class="list-group-item list-group-item-action">
             Usuários
           </a>
         </div>
