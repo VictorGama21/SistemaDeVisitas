@@ -20,6 +20,7 @@
 
   <properties>
     <java.version>21</java.version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
   <dependencies>
@@ -40,14 +41,14 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-security</artifactId>
     </dependency>
-           
-    <!-- Integração Thymeleaf + Spring Security para usar sec:authorize -->
+
+    <!-- Thymeleaf + Spring Security (sec:authorize) -->
     <dependency>
       <groupId>org.thymeleaf.extras</groupId>
       <artifactId>thymeleaf-extras-springsecurity6</artifactId>
     </dependency>
 
-    <!-- Validação (para @NotBlank, @Email, etc.) -->
+    <!-- Bean Validation -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-validation</artifactId>
@@ -59,30 +60,23 @@
       <artifactId>spring-boot-starter-data-jpa</artifactId>
     </dependency>
 
-    <!-- PostgreSQL driver -->
+    <!-- PostgreSQL -->
     <dependency>
       <groupId>org.postgresql</groupId>
       <artifactId>postgresql</artifactId>
       <scope>runtime</scope>
     </dependency>
 
-    <!-- Actuator (health etc.) -->
+    <!-- Actuator -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-actuator</artifactId>
     </dependency>
 
-    <!-- Flyway (migrações) -->
+    <!-- Flyway (versão gerenciada pelo Boot: 9.x) -->
     <dependency>
       <groupId>org.flywaydb</groupId>
       <artifactId>flyway-core</artifactId>
-    </dependency>
-
-    <!-- Extensão específica do Postgres (necessária no Flyway 10+) -->
-    <dependency>
-      <groupId>org.flywaydb</groupId>
-      <artifactId>flyway-database-postgresql</artifactId>
-      <scope>runtime</scope>
     </dependency>
 
     <!-- Lombok (opcional) -->
@@ -98,7 +92,6 @@
       <artifactId>spring-boot-starter-test</artifactId>
       <scope>test</scope>
     </dependency>
-
     <dependency>
       <groupId>org.springframework.security</groupId>
       <artifactId>spring-security-test</artifactId>
@@ -108,13 +101,14 @@
 
   <build>
     <plugins>
-      <!-- Java 21 -->
+      <!-- O parent do Boot já configura o compilador p/ usar ${java.version},
+           então este plugin é opcional. Deixei explícito para fixar release 21. -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.11.0</version>
         <configuration>
-          <release>21</release>
+          <release>${java.version}</release>
         </configuration>
       </plugin>
 
@@ -129,14 +123,11 @@
     <profile>
       <id>production</id>
       <properties>
-        <!-- pula testes no build de produção -->
         <maven.test.skip>true</maven.test.skip>
-        <!-- força Java 21 no profile -->
         <maven.compiler.release>21</maven.compiler.release>
       </properties>
       <build>
         <plugins>
-          <!-- garante empacotamento com repackage -->
           <plugin>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-maven-plugin</artifactId>
