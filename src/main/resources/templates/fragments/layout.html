@@ -42,8 +42,7 @@
     <!-- Sidebar -->
     <aside class="col-12 col-md-3 col-lg-2 border-end bg-white min-vh-100 p-0" sec:authorize="isAuthenticated()">
       <div class="list-group list-group-flush">
-
-        <!-- Dashboard comum -->
+      <!-- Dashboard comum -->
         <a th:href="@{/home}" class="list-group-item list-group-item-action">
           Dashboard
         </a>
@@ -68,7 +67,10 @@
           <a th:href="@{/admin/stores}" class="list-group-item list-group-item-action">
             Lojas
           </a>
-          
+          <a th:href="@{/admin/visitas}" class="list-group-item list-group-item-action">
+            Agenda de visitas
+          </a>
+
           <a th:href="@{/admin/catalogos}" class="list-group-item list-group-item-action">
             Catálogos auxiliares
           </a>
