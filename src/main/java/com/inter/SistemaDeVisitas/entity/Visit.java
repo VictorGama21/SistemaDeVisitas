@@ -34,6 +34,19 @@ public class Visit {
 
   @Column(name = "updated_at", nullable = false)
   private Instant updatedAt = Instant.now();
+  @PrePersist
+  void onCreate() {
+    Instant now = Instant.now();
+    if (createdAt == null) {
+      createdAt = now;
+    }
+    updatedAt = now;
+  }
+
+  @PreUpdate
+  void onUpdate() {
+    updatedAt = Instant.now();
+  }
 
   // getters/setters
   public Long getId() { return id; }
