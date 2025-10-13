@@ -41,25 +41,35 @@
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center mb-3">
             <h5 class="card-title mb-0">Agenda</h5>
-            <span class="badge text-bg-success">Loja ativa</span>
+            <span class="badge" th:classappend="${activeStore.active} ? ' text-bg-success' : ' text-bg-secondary'" th:text="${activeStore.active} ? 'Loja ativa' : 'Loja inativa'"></span>
           </div>
           <div class="table-responsive">
             <table class="table mb-0 align-middle">
               <thead>
                 <tr>
                   <th>Data</th>
+                  <th>Modalidade</th>
+                  <th>Comprador</th>
+                  <th>Fornecedor</th>
+                  <th>Segmento</th>
                   <th>Status</th>
-                  <th>Comentário</th>
+                  <th>Informações comerciais</th>
+                  <th>Observações</th>
                 </tr>
               </thead>
               <tbody>
                 <tr th:each="visit : ${visits}">
-                  <td th:text="${#temporals.format(visit.scheduledAt, 'dd/MM/yyyy HH:mm')}">10/06/2024 10:00</td>
+                  <td th:text="${#temporals.format(visit.scheduledDate, 'dd/MM/yyyy')}">10/06/2024</td>
+                  <td th:text="${visit.modality.label}">Promotoria - Reposição</td>
+                  <td th:text="${visit.buyer != null ? visit.buyer.name : '-'}">-</td>
+                  <td th:text="${visit.supplier != null ? visit.supplier.name : '-'}">-</td>
+                  <td th:text="${visit.segment != null ? visit.segment.name : '-'}">-</td>
                   <td><span class="badge text-bg-secondary" th:text="${visit.status}">PENDING</span></td>
+                  <td th:text="${visit.commercialInfo} ?: '-'">-</td>
                   <td th:text="${visit.comment} ?: '-'">-</td>
                 </tr>
                 <tr th:if="${#lists.isEmpty(visits)}">
-                  <td colspan="3" class="text-center text-muted py-4">Nenhuma visita agendada.</td>
+                  <td colspan="8" class="text-center text-muted py-4">Nenhuma visita agendada.</td>
                 </tr>
               </tbody>
             </table>
