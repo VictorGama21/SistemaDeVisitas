@@ -6,7 +6,9 @@ import java.time.Instant;
 @Entity
 @Table(name = "visits")
 public class Visit {
-  @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
   @ManyToOne(optional = false, fetch = FetchType.LAZY)
@@ -29,23 +31,22 @@ public class Visit {
   @JoinColumn(name = "created_by_user_id")
   private User createdBy;
 
-  @Column(name = "created_at", nullable = false)
-  private Instant createdAt = Instant.now();
+  @Column(name = "created_at", nullable = false, updatable = false)
+  private Instant createdAt;
 
   @Column(name = "updated_at", nullable = false)
-  private Instant updatedAt = Instant.now();
+  private Instant updatedAt;
+
   @PrePersist
   void onCreate() {
     Instant now = Instant.now();
-    if (createdAt == null) {
-      createdAt = now;
-    }
-    updatedAt = now;
+    this.createdAt = (this.createdAt == null) ? now : this.createdAt;
+    this.updatedAt = now;
   }
 
   @PreUpdate
   void onUpdate() {
-    updatedAt = Instant.now();
+    this.updatedAt = Instant.now();
   }
 
   // getters/setters
