@@ -1,11 +1,8 @@
-<!-- src/main/resources/templates/home.html -->
 <!doctype html>
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
-  <!-- Chama o layout e injeta o fragmento "content" desta página -->
   <th:block th:replace="~{fragments/layout :: layout(~{::content})}">
 
-    <!-- Este é o fragmento que será injetado dentro do layout -->
     <th:block th:fragment="content">
       <div class="d-flex align-items-center justify-content-between mb-3">
         <h4 class="mb-0">Painel</h4>
@@ -29,7 +26,6 @@
             </div>
           </div>
         </div>
-        <!-- cards extras -->
       </div>
 
       <div class="mt-4" th:if="${isStoreUser}">
@@ -68,27 +64,45 @@
 
         <div class="card shadow-sm" th:if="${activeStore != null}">
           <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <h5 class="card-title mb-0">Próximas visitas</h5>
-              <a class="btn btn-sm btn-outline-secondary" th:href="@{/loja/visitas}">Ver todas</a>
+            <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-3 gap-2">
+              <div>
+                <h5 class="card-title mb-0">Visitas da semana</h5>
+                <small class="text-muted" th:text="${#temporals.format(weekStart, 'dd/MM')} + ' a ' + #temporals.format(weekEnd, 'dd/MM')">10/06 a 16/06</small>
+              </div>
+              <form method="get" class="d-flex align-items-center gap-2">
+                <input type="hidden" name="status" th:value="${param.status}">
+                <select class="form-select form-select-sm" name="semana">
+                  <option th:each="offset : ${weekOptions}"
+                          th:value="${offset}"
+                          th:selected="${offset == weekOffset}"
+                          th:text="${offset == 0 ? 'Semana atual (' + #temporals.format(weekStart, 'dd/MM') + ' - ' + #temporals.format(weekEnd, 'dd/MM') + ')' : #temporals.format(weekBase.plusWeeks(offset), 'dd/MM') + ' - ' + #temporals.format(weekBase.plusWeeks(offset).plusDays(6), 'dd/MM')}"></option>
+                </select>
+                <button class="btn btn-outline-success btn-sm" type="submit">Aplicar</button>
+              </form>
             </div>
             <div class="table-responsive">
               <table class="table table-sm mb-0">
                 <thead>
                   <tr>
                     <th>Data</th>
+                    <th>Modalidade</th>
+                    <th>Comprador</th>
+                    <th>Fornecedor</th>
                     <th>Status</th>
-                    <th>Comentário</th>
+                    <th>Informações comerciais</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr th:each="visit : ${storeVisits}">
-                    <td th:text="${#temporals.format(visit.scheduledAt, 'dd/MM/yyyy HH:mm')}">10/06/2024 10:00</td>
+                    <td th:text="${#temporals.format(visit.scheduledDate, 'dd/MM/yyyy')}">10/06/2024</td>
+                    <td th:text="${visit.modality.label}">Promotoria - Reposição</td>
+                    <td th:text="${visit.buyer != null ? visit.buyer.name : '-'}">-</td>
+                    <td th:text="${visit.supplier != null ? visit.supplier.name : '-'}">-</td>
                     <td><span class="badge text-bg-secondary" th:text="${visit.status}">PENDING</span></td>
-                    <td th:text="${visit.comment} ?: '-'">-</td>
+                    <td th:text="${visit.commercialInfo} ?: '-'">-</td>
                   </tr>
                   <tr th:if="${#lists.isEmpty(storeVisits)}">
-                    <td colspan="3" class="text-center text-muted py-3">Nenhuma visita agendada.</td>
+                    <td colspan="6" class="text-center text-muted py-3">Nenhuma visita agendada nesta semana.</td>
                   </tr>
                 </tbody>
               </table>
@@ -111,16 +125,25 @@
 
         <p class="text-muted">Total de lojas ativas: <strong th:text="${totalStoresAtivas}">0</strong></p>
 
-        <div class="btn-group btn-group-sm mb-3" role="group" aria-label="Filtro de lojas">
-          <a th:href="@{/home(status='ativos')}" class="btn btn-outline-success"
-             th:classappend="${storeFilter == 'ativos'} ? ' active'">Ativas</a>
-          <a th:href="@{/home(status='inativos')}" class="btn btn-outline-success"
-             th:classappend="${storeFilter == 'inativos'} ? ' active'">Inativas</a>
-          <a th:href="@{/home(status='todos')}" class="btn btn-outline-success"
-             th:classappend="${storeFilter == 'todos'} ? ' active'">Todas</a>
+        <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-3">
+          <div class="btn-group btn-group-sm" role="group" aria-label="Filtro de lojas">
+            <a th:href="@{/home(status='ativos', dia=${rawDayFilter})}" class="btn btn-outline-success"
+               th:classappend="${storeFilter == 'ativos'} ? ' active'">Ativas</a>
+            <a th:href="@{/home(status='inativos', dia=${rawDayFilter})}" class="btn btn-outline-success"
+               th:classappend="${storeFilter == 'inativos'} ? ' active'">Inativas</a>
+            <a th:href="@{/home(status='todos', dia=${rawDayFilter})}" class="btn btn-outline-success"
+               th:classappend="${storeFilter == 'todos'} ? ' active'">Todas</a>
+          </div>
+          <form method="get" class="d-flex align-items-center gap-2">
+            <input type="hidden" name="status" th:value="${storeFilter}">
+            <select class="form-select form-select-sm" name="dia">
+              <option th:each="option : ${availableDays}" th:value="${option}" th:selected="${option == rawDayFilter}" th:text="${option == 'todas' ? 'Todos os dias' : #strings.capitalize(option)}"></option>
+            </select>
+            <button class="btn btn-outline-success btn-sm" type="submit">Filtrar dia</button>
+          </form>
         </div>
 
-        <div class="table-responsive bg-white shadow-sm rounded">
+        <div class="table-responsive bg-white shadow-sm rounded mb-4">
           <table class="table mb-0 align-middle">
             <thead>
               <tr>
@@ -141,6 +164,40 @@
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title">Próximas visitas por dia</h5>
+            <p class="text-muted mb-3">Filtradas por: <strong th:text="${dayFilter}">Todas</strong></p>
+            <div class="table-responsive">
+              <table class="table table-sm mb-0">
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Lojas</th>
+                    <th>Modalidade</th>
+                    <th>Fornecedor</th>
+                    <th>Comprador</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr th:each="visit : ${upcomingVisits}">
+                    <td th:text="${#temporals.format(visit.scheduledDate, 'dd/MM/yyyy')}">10/06/2024</td>
+                    <td>
+                      <span class="badge text-bg-light me-1" th:each="store : ${visit.stores}" th:text="${store.name}"></span>
+                    </td>
+                    <td th:text="${visit.modality.label}">Promotoria - Reposição</td>
+                    <td th:text="${visit.supplier != null ? visit.supplier.name : '-'}">-</td>
+                    <td th:text="${visit.buyer != null ? visit.buyer.name : '-'}">-</td>
+                  </tr>
+                  <tr th:if="${#lists.isEmpty(upcomingVisits)}">
+                    <td colspan="5" class="text-center text-muted py-3">Nenhuma visita encontrada para o filtro selecionado.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
     </th:block>
