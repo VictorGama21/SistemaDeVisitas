@@ -4,12 +4,68 @@
   <th:block th:replace="~{fragments/layout :: layout(~{::content})}">
     <th:block th:fragment="content">
       <div class="d-flex align-items-center justify-content-between mb-3">
-        <h4 class="mb-0">Minhas visitas</h4>
+        <div>
+          <h4 class="mb-0">Minhas visitas</h4>
+          <p class="text-muted mb-0">Acompanhe a agenda da loja associada ao seu perfil.</p>
+        </div>
       </div>
 
-      <div class="alert alert-info" role="alert">
-        O acompanhamento de visitas ainda está em desenvolvimento.
-        Você conseguirá registrar visitas assim que a funcionalidade for liberada.
+      <div class="card shadow-sm mb-4">
+        <div class="card-body">
+          <h5 class="card-title">Loja associada</h5>
+          <div th:if="${activeStore != null}">
+            <p class="mb-1"><strong>Nome:</strong> <span th:text="${activeStore.name}">Loja</span></p>
+            <p class="mb-0"><strong>CNPJ:</strong> <span th:text="${activeStore.cnpj} ?: '-'">-</span></p>
+          </div>
+          <div th:if="${activeStore == null}" class="alert alert-info mb-3">
+            Você ainda não está associado a nenhuma loja. Escolha uma abaixo para visualizar os dados.
+          </div>
+          <form class="row g-2" th:action="@{/loja/visitas/associar}" method="post">
+            <div class="col-sm-8">
+              <select class="form-select" name="storeId" required>
+                <option value="" disabled selected>Selecione uma loja</option>
+                <option th:each="store : ${stores}" th:value="${store.id}" th:text="${store.name}"></option>
+              </select>
+            </div>
+            <div class="col-sm-4 text-sm-end">
+              <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+              <button class="btn btn-outline-success w-100" type="submit" th:text="${activeStore == null} ? 'Associar loja' : 'Alterar loja'">
+                Associar loja
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="card shadow-sm" th:if="${activeStore != null}">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="card-title mb-0">Agenda</h5>
+            <span class="badge text-bg-success">Loja ativa</span>
+          </div>
+          <div class="table-responsive">
+            <table class="table mb-0 align-middle">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Status</th>
+                  <th>Comentário</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr th:each="visit : ${visits}">
+                  <td th:text="${#temporals.format(visit.scheduledAt, 'dd/MM/yyyy HH:mm')}">10/06/2024 10:00</td>
+                  <td><span class="badge text-bg-secondary" th:text="${visit.status}">PENDING</span></td>
+                  <td th:text="${visit.comment} ?: '-'">-</td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(visits)}">
+                  <td colspan="3" class="text-center text-muted py-4">Nenhuma visita agendada.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </th:block>
   </th:block>
+</html>
