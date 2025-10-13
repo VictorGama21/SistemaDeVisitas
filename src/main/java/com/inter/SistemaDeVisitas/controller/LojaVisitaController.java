@@ -56,15 +56,3 @@ public class LojaVisitaController {
     return "redirect:/loja/visitas";
   }
 }
-
-  @PostMapping("/associar")
-  public String associar(@RequestParam Long storeId, Authentication authentication) {
-    User current = users.findByEmail(authentication.getName()).orElseThrow();
-    Store store = stores.findById(storeId)
-        .filter(Store::isActive)
-        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-    current.setStore(store);
-    users.save(current);
-    return "redirect:/loja/visitas";
-  }
-}
