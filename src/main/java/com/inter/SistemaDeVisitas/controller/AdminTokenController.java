@@ -1,6 +1,3 @@
-// src/main/java/com/inter/SistemaDeVisitas/controller/AdminTokenController.java
-package com.inter.SistemaDeVisitas.controller;
-
 import com.inter.SistemaDeVisitas.entity.RegistrationToken;
 import com.inter.SistemaDeVisitas.entity.RoleGroup;
 import com.inter.SistemaDeVisitas.repo.RegistrationTokenRepository;
@@ -26,7 +23,7 @@ public class AdminTokenController {
   @GetMapping
   public String list(Model model) {
     model.addAttribute("tokens", tokens.findAll());
-    model.addAttribute("roles", new RoleGroup[]{RoleGroup.ADMIN, RoleGroup.LOJA});
+    model.addAttribute("roles", RoleGroup.values());
     return "admin/tokens"; // templates/admin/tokens.html
   }
 
@@ -52,5 +49,3 @@ public class AdminTokenController {
     byte[] buf = new byte[bytes];
     random.nextBytes(buf);
     return Base64.getUrlEncoder().withoutPadding().encodeToString(buf);
-  }
-}
