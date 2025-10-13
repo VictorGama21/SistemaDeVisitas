@@ -1,8 +1,3 @@
-package com.inter.SistemaDeVisitas.entity;
-
-import jakarta.persistence.*;
-import java.time.Instant;
-
 @Entity
 @Table(name = "users", uniqueConstraints = @UniqueConstraint(columnNames = "email"))
 public class User {
