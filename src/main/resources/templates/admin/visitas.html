@@ -8,28 +8,71 @@
           <h4 class="mb-0">Agenda de visitas</h4>
           <p class="text-muted mb-0">Agende e acompanhe as visitas de todas as lojas.</p>
         </div>
+        <div class="btn-group">
+          <a class="btn btn-outline-success btn-sm" href="/admin/catalogos">Catálogos auxiliares</a>
+        </div>
+      </div>
+
+      <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
+      <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
+      <div th:if="${warningMessages}" class="alert alert-warning">
+        <p class="mb-1 fw-semibold">Importação concluída com avisos:</p>
+        <ul class="mb-0 ps-3">
+          <li th:each="msg : ${warningMessages}" th:text="${msg}"></li>
+        </ul>
       </div>
 
       <div class="row g-3 mb-4">
         <div class="col-12 col-lg-4">
-          <div class="card shadow-sm">
+          <div class="card shadow-sm h-100">
             <div class="card-body">
               <h5 class="card-title">Agendar nova visita</h5>
-              <form th:action="@{/admin/visitas}" method="post">
+              <form th:action="@{/admin/visitas}" method="post" class="needs-validation" novalidate>
                 <div class="mb-3">
-                  <label for="visitStore" class="form-label">Loja</label>
-                  <select id="visitStore" name="storeId" class="form-select" required>
-                    <option value="" disabled selected>Selecione uma loja</option>
+                  <label for="visitStore" class="form-label">Lojas</label>
+                  <select id="visitStore" name="storeIds" class="form-select" multiple required>
                     <option th:each="store : ${stores}" th:value="${store.id}" th:text="${store.name}"></option>
+                  </select>
+                  <div class="form-text">Selecione uma ou mais lojas (Ctrl + clique).</div>
+                </div>
+                <div class="mb-3">
+                  <label for="visitDate" class="form-label">Data da visita</label>
+                  <input type="date" id="visitDate" name="scheduledDate" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                  <label for="visitBuyer" class="form-label">Comprador responsável</label>
+                  <input id="visitBuyer" name="buyerName" list="buyerOptions" class="form-control" placeholder="Comece a digitar...">
+                  <datalist id="buyerOptions">
+                    <option th:each="buyer : ${buyers}" th:value="${buyer.name}"></option>
+                  </datalist>
+                </div>
+                <div class="mb-3">
+                  <label for="visitSupplier" class="form-label">Fornecedor</label>
+                  <input id="visitSupplier" name="supplierName" list="supplierOptions" class="form-control" placeholder="Comece a digitar...">
+                  <datalist id="supplierOptions">
+                    <option th:each="supplier : ${suppliers}" th:value="${supplier.name}"></option>
+                  </datalist>
+                </div>
+                <div class="mb-3">
+                  <label for="visitSegment" class="form-label">Segmento</label>
+                  <input id="visitSegment" name="segmentName" list="segmentOptions" class="form-control" placeholder="Digite para pesquisar">
+                  <datalist id="segmentOptions">
+                    <option th:each="segment : ${segments}" th:value="${segment.name}"></option>
+                  </datalist>
+                </div>
+                <div class="mb-3">
+                  <label for="visitModality" class="form-label">Modalidade</label>
+                  <select id="visitModality" name="modality" class="form-select">
+                    <option th:each="modality : ${modalities}" th:value="${modality.name()}" th:text="${modality.label}"></option>
                   </select>
                 </div>
                 <div class="mb-3">
-                  <label for="visitDate" class="form-label">Data e hora</label>
-                  <input type="datetime-local" id="visitDate" name="scheduledAt" class="form-control" required>
+                  <label for="visitCommercialInfo" class="form-label">Informações comerciais</label>
+                  <textarea id="visitCommercialInfo" name="commercialInfo" class="form-control" rows="3" placeholder="Troca, devolução, ações combinadas..."></textarea>
                 </div>
                 <div class="mb-3">
-                  <label for="visitComment" class="form-label">Comentário (opcional)</label>
-                  <textarea id="visitComment" name="comment" class="form-control" rows="3"></textarea>
+                  <label for="visitComment" class="form-label">Observações internas</label>
+                  <textarea id="visitComment" name="comment" class="form-control" rows="2"></textarea>
                 </div>
                 <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                 <button type="submit" class="btn btn-success w-100">Agendar</button>
@@ -38,6 +81,25 @@
           </div>
         </div>
         <div class="col-12 col-lg-8">
+          <div class="card shadow-sm mb-3">
+            <div class="card-body">
+              <h5 class="card-title">Importar visitas em lote</h5>
+              <p class="text-muted small">Envie um arquivo CSV com as colunas Data (dd/MM/aaaa); Lojas (separadas por "|"); Comprador; Fornecedor; Segmento; Modalidade; Informações comerciais; Observações.</p>
+              <div class="d-flex flex-column flex-md-row gap-2 mb-3">
+                <a class="btn btn-outline-secondary btn-sm" href="/modelos/visitas.csv" download>Baixar modelo CSV</a>
+              </div>
+              <form th:action="@{/admin/visitas/importar}" method="post" enctype="multipart/form-data" class="row g-2 align-items-center">
+                <div class="col-12 col-md-8">
+                  <input type="file" class="form-control" name="file" accept=".csv,.txt" required>
+                </div>
+                <div class="col-12 col-md-4 text-md-end">
+                  <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                  <button type="submit" class="btn btn-outline-success w-100">Importar</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
           <div class="card shadow-sm">
             <div class="card-body">
               <form method="get" class="row g-2 align-items-end mb-3">
@@ -60,21 +122,31 @@
                 <table class="table align-middle mb-0">
                   <thead>
                     <tr>
-                      <th>Loja</th>
-                      <th>Agendada para</th>
-                      <th>Status</th>
-                      <th>Comentário</th>
+                      <th>Lojas</th>
+                      <th>Data</th>
+                      <th>Modalidade</th>
+                      <th>Comprador</th>
+                      <th>Fornecedor</th>
+                      <th>Segmento</th>
+                      <th>Informações comerciais</th>
+                      <th>Observações</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr th:each="visit : ${visits}">
-                      <td th:text="${visit.store.name}">Loja XPTO</td>
-                      <td th:text="${#temporals.format(visit.scheduledAt, 'dd/MM/yyyy HH:mm')}">10/06/2024 09:00</td>
-                      <td><span class="badge text-bg-secondary" th:text="${visit.status}">PENDING</span></td>
+                      <td>
+                        <span class="badge text-bg-light me-1" th:each="store : ${visit.stores}" th:text="${store.name}"></span>
+                      </td>
+                      <td th:text="${#temporals.format(visit.scheduledDate, 'dd/MM/yyyy')}">10/06/2024</td>
+                      <td th:text="${visit.modality.label}">Promotoria - Reposição</td>
+                      <td th:text="${visit.buyer != null ? visit.buyer.name : '-'}">-</td>
+                      <td th:text="${visit.supplier != null ? visit.supplier.name : '-'}">-</td>
+                      <td th:text="${visit.segment != null ? visit.segment.name : '-'}">-</td>
+                      <td th:text="${visit.commercialInfo} ?: '-'">-</td>
                       <td th:text="${visit.comment} ?: '-'">-</td>
                     </tr>
                     <tr th:if="${#lists.isEmpty(visits)}">
-                      <td colspan="4" class="text-center text-muted py-4">Nenhuma visita encontrada.</td>
+                      <td colspan="8" class="text-center text-muted py-4">Nenhuma visita encontrada.</td>
                     </tr>
                   </tbody>
                 </table>
