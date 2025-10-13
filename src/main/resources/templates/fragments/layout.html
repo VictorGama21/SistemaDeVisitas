@@ -49,7 +49,6 @@
         </a>
 
         <!-- Menu da loja -->
-        <div sec:authorize="hasAnyRole('LOJA','ADMIN','SUPER')">
         <div sec:authorize="hasRole('LOJA')">
           <div class="list-group-item small text-muted">Operação</div>
           <a th:href="@{/loja/visitas}" class="list-group-item list-group-item-action">
@@ -65,6 +64,12 @@
           </a>
           <a th:href="@{/admin/users}" class="list-group-item list-group-item-action">
             Usuários
+          </a>
+          <a th:href="@{/admin/stores}" class="list-group-item list-group-item-action">
+            Lojas
+          </a>
+          <a th:href="@{/admin/visitas}" class="list-group-item list-group-item-action">
+            Agenda de visitas
           </a>
         </div>
 
