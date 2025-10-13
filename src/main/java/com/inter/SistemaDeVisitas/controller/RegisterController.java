@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 
 import java.time.Instant;
+import java.util.Locale;
 
 @Controller
 @Validated
@@ -47,42 +48,51 @@ public class RegisterController {
             @NotBlank String inviteToken, // campo do formulário
             Model model
     ) {
+        String sanitizedFullName = fullName == null ? null : fullName.trim();
+        String normalizedEmail = email == null ? null : email.trim().toLowerCase(Locale.ROOT);
+        String normalizedToken = inviteToken == null ? null : inviteToken.trim();
+
+        model.addAttribute("fullName", sanitizedFullName);
+        model.addAttribute("email", normalizedEmail);
+
         // validações simples
         if (!password.equals(confirmPassword)) {
             model.addAttribute("error", "As senhas não coincidem.");
-            model.addAttribute("fullName", fullName);
-            model.addAttribute("email", email);
             return "register";
         }
 
-        if (users.findByEmail(email).isPresent()) {
+        if (normalizedEmail == null || normalizedEmail.isBlank()) {
+            model.addAttribute("error", "Informe um e-mail válido.");
+            return "register";
+        }
+
+        if (normalizedEmail != null && users.findByEmail(normalizedEmail).isPresent()) {
             model.addAttribute("error", "E-mail já cadastrado.");
-            model.addAttribute("fullName", fullName);
-            model.addAttribute("email", email);
+            return "register";
+        }
+
+        if (normalizedToken == null || normalizedToken.isEmpty()) {
+            model.addAttribute("error", "Informe um token válido.");
             return "register";
         }
 
         // valida token
-        var opt = tokens.findByToken(inviteToken);
+        var opt = tokens.findByToken(normalizedToken);
         if (opt.isEmpty()) {
             model.addAttribute("error", "Token inválido.");
-            model.addAttribute("fullName", fullName);
-            model.addAttribute("email", email);
             return "register";
         }
 
         RegistrationToken t = opt.get();
         if (t.isUsed() || t.getExpiresAt().isBefore(Instant.now())) {
             model.addAttribute("error", "Token expirado ou já utilizado.");
-            model.addAttribute("fullName", fullName);
-            model.addAttribute("email", email);
             return "register";
         }
 
         // cria usuário com o role permitido pelo token
         User u = new User();
-        u.setFullName(fullName);
-        u.setEmail(email);
+        u.setFullName(sanitizedFullName);
+        u.setEmail(normalizedEmail);
         u.setPassword(passwordEncoder.encode(password));
         u.setRoleGroup(t.getRoleGroupAllowed());
         u.setEnabled(true);
