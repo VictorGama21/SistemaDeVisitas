@@ -1,29 +1,53 @@
 package com.inter.SistemaDeVisitas.entity;
 
 import jakarta.persistence.*;
+
 import java.time.Instant;
+import java.time.LocalDate;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "visits")
 public class Visit {
-
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @ManyToOne(optional = false, fetch = FetchType.LAZY)
-  @JoinColumn(name = "store_id")
-  private Store store;
+  @ManyToMany
+  @JoinTable(name = "visit_stores",
+      joinColumns = @JoinColumn(name = "visit_id"),
+      inverseJoinColumns = @JoinColumn(name = "store_id"))
+  private Set<Store> stores = new LinkedHashSet<>();
 
-  @Column(name = "scheduled_at", nullable = false)
-  private Instant scheduledAt;
+  @Column(name = "scheduled_date", nullable = false)
+  private LocalDate scheduledDate;
 
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 16)
   private VisitStatus status = VisitStatus.PENDING;
 
+  @Enumerated(EnumType.STRING)
+  @Column(name = "modality", nullable = false, length = 32)
+  private VisitModality modality = VisitModality.PROMOTORIA_REPOSICAO;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "buyer_id")
+  private Buyer buyer;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "supplier_id")
+  private Supplier supplier;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "segment_id")
+  private Segment segment;
+
   @Column(columnDefinition = "text")
   private String comment;
+
+  @Column(name = "commercial_info", columnDefinition = "text")
+  private String commercialInfo;
 
   private Integer rating; // 1..5 (opcional)
 
@@ -31,40 +55,131 @@ public class Visit {
   @JoinColumn(name = "created_by_user_id")
   private User createdBy;
 
-  @Column(name = "created_at", nullable = false, updatable = false)
-  private Instant createdAt;
+  @Column(name = "created_at", nullable = false)
+  private Instant createdAt = Instant.now();
 
   @Column(name = "updated_at", nullable = false)
-  private Instant updatedAt;
+  private Instant updatedAt = Instant.now();
 
   @PrePersist
   void onCreate() {
     Instant now = Instant.now();
-    this.createdAt = (this.createdAt == null) ? now : this.createdAt;
-    this.updatedAt = now;
+    if (createdAt == null) {
+      createdAt = now;
+    }
+    updatedAt = now;
   }
 
   @PreUpdate
   void onUpdate() {
-    this.updatedAt = Instant.now();
+    updatedAt = Instant.now();
   }
 
-  // getters/setters
-  public Long getId() { return id; }
-  public Store getStore() { return store; }
-  public void setStore(Store store) { this.store = store; }
-  public Instant getScheduledAt() { return scheduledAt; }
-  public void setScheduledAt(Instant scheduledAt) { this.scheduledAt = scheduledAt; }
-  public VisitStatus getStatus() { return status; }
-  public void setStatus(VisitStatus status) { this.status = status; }
-  public String getComment() { return comment; }
-  public void setComment(String comment) { this.comment = comment; }
-  public Integer getRating() { return rating; }
-  public void setRating(Integer rating) { this.rating = rating; }
-  public User getCreatedBy() { return createdBy; }
-  public void setCreatedBy(User createdBy) { this.createdBy = createdBy; }
-  public Instant getCreatedAt() { return createdAt; }
-  public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
-  public Instant getUpdatedAt() { return updatedAt; }
-  public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
+  public Long getId() {
+    return id;
+  }
+
+  public Set<Store> getStores() {
+    return stores;
+  }
+
+  public void setStores(Set<Store> stores) {
+    this.stores = stores == null ? new LinkedHashSet<>() : new LinkedHashSet<>(stores);
+  }
+
+  public LocalDate getScheduledDate() {
+    return scheduledDate;
+  }
+
+  public void setScheduledDate(LocalDate scheduledDate) {
+    this.scheduledDate = scheduledDate;
+  }
+
+  public VisitStatus getStatus() {
+    return status;
+  }
+
+  public void setStatus(VisitStatus status) {
+    this.status = status;
+  }
+
+  public VisitModality getModality() {
+    return modality;
+  }
+
+  public void setModality(VisitModality modality) {
+    this.modality = modality;
+  }
+
+  public Buyer getBuyer() {
+    return buyer;
+  }
+
+  public void setBuyer(Buyer buyer) {
+    this.buyer = buyer;
+  }
+
+  public Supplier getSupplier() {
+    return supplier;
+  }
+
+  public void setSupplier(Supplier supplier) {
+    this.supplier = supplier;
+  }
+
+  public Segment getSegment() {
+    return segment;
+  }
+
+  public void setSegment(Segment segment) {
+    this.segment = segment;
+  }
+
+  public String getComment() {
+    return comment;
+  }
+
+  public void setComment(String comment) {
+    this.comment = comment;
+  }
+
+  public String getCommercialInfo() {
+    return commercialInfo;
+  }
+
+  public void setCommercialInfo(String commercialInfo) {
+    this.commercialInfo = commercialInfo;
+  }
+
+  public Integer getRating() {
+    return rating;
+  }
+
+  public void setRating(Integer rating) {
+    this.rating = rating;
+  }
+
+  public User getCreatedBy() {
+    return createdBy;
+  }
+
+  public void setCreatedBy(User createdBy) {
+    this.createdBy = createdBy;
+  }
+
+  public Instant getCreatedAt() {
+    return createdAt;
+  }
+
+  public void setCreatedAt(Instant createdAt) {
+    this.createdAt = createdAt;
+  }
+
+  public Instant getUpdatedAt() {
+    return updatedAt;
+  }
+
+  public void setUpdatedAt(Instant updatedAt) {
+    this.updatedAt = updatedAt;
+  }
 }
