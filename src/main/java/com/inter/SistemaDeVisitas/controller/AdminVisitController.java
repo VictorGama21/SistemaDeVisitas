@@ -55,6 +55,7 @@ public class AdminVisitController {
     public String list(@RequestParam(name = "storeId", required = false) Long storeId,
                        Model model) {
         List<Store> storeList = stores.findAllByOrderByNameAsc();
+        List<Store> activeStores = stores.findByActiveTrueOrderByNameAsc();
         List<Visit> visitList;
         Store selectedStore = null;
 
@@ -69,6 +70,7 @@ public class AdminVisitController {
         }
 
         model.addAttribute("stores", storeList);
+        model.addAttribute("availableStores", activeStores);
         model.addAttribute("visits", visitList);
         model.addAttribute("selectedStore", selectedStore);
         model.addAttribute("buyers", buyers.findByActiveTrueOrderByNameAsc());
