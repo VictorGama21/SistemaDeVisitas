@@ -4,90 +4,86 @@
       xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
       th:fragment="layout(content)">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title th:text="${pageTitle} ?: 'Sistema de Visitas'">Sistema de Visitas</title>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title th:text="${pageTitle} ?: 'Sistema de Visitas'">Sistema de Visitas</title>
 
-  <!-- Bootstrap e CSS custom -->
-  <link rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
-  <link th:href="@{/css/app.css}" rel="stylesheet">
-</head>
+    <!-- Bootstrap e CSS custom -->
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <link th:href="@{/css/app.css}" rel="stylesheet">
+  </head>
 
-<body class="bg-light">
+  <body class="bg-light">
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background:#2e7d32;"> <!-- Verde Sankhya -->
+      <div class="container-fluid">
+        <a class="navbar-brand fw-semibold" th:href="@{/home}">Sistema de Visitas</a>
 
-<!-- Navbar -->
-<nav class="navbar navbar-expand-lg navbar-dark" style="background:#2e7d32;"> <!-- Verde Sankhya -->
-  <div class="container-fluid">
-    <a class="navbar-brand fw-semibold" th:href="@{/home}">Sistema de Visitas</a>
+        <form class="d-none d-md-flex" role="search">
+          <input class="form-control" type="search" placeholder="Pesquisar..." aria-label="Search">
+        </form>
 
-    <form class="d-none d-md-flex" role="search">
-      <input class="form-control" type="search" placeholder="Pesquisar..." aria-label="Search">
-    </form>
-
-    <div class="d-flex gap-2" sec:authorize="isAuthenticated()">
-      <!-- Botão sair com CSRF -->
-      <form th:action="@{/logout}" method="post" class="m-0">
-        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-        <button type="submit" class="btn btn-sm btn-light">Sair</button>
-      </form>
-    </div>
-  </div>
-</nav>
-
-<!-- Container principal -->
-<div class="container-fluid">
-  <div class="row">
-    <!-- Sidebar -->
-    <aside class="col-12 col-md-3 col-lg-2 border-end bg-white min-vh-100 p-0" sec:authorize="isAuthenticated()">
-      <div class="list-group list-group-flush">
-      <!-- Dashboard comum -->
-        <a th:href="@{/home}" class="list-group-item list-group-item-action">
-          Dashboard
-        </a>
-
-        <!-- Menu da loja -->
-        <div sec:authorize="hasRole('LOJA')">
-          <div class="list-group-item small text-muted">Operação</div>
-          <a th:href="@{/loja/visitas}" class="list-group-item list-group-item-action">
-            Minhas visitas
-          </a>
+        <div class="d-flex gap-2" sec:authorize="isAuthenticated()">
+          <!-- Botão sair com CSRF -->
+          <form th:action="@{/logout}" method="post" class="m-0">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <button type="submit" class="btn btn-sm btn-light">Sair</button>
+          </form>
         </div>
-
-        <!-- Menu admin/super -->
-        <div sec:authorize="hasAnyRole('ADMIN','SUPER')">
-          <div class="list-group-item small text-muted">Administração</div>
-          <a th:href="@{/admin/tokens}" class="list-group-item list-group-item-action">
-            Tokens de cadastro
-          </a>
-          <a th:href="@{/admin/users}" class="list-group-item list-group-item-action">
-            Usuários
-          </a>
-          <a th:href="@{/admin/stores}" class="list-group-item list-group-item-action">
-            Lojas
-          </a>
-          <a th:href="@{/admin/visitas}" class="list-group-item list-group-item-action">
-            Agenda de visitas
-          </a>
-
-          <a th:href="@{/admin/catalogos}" class="list-group-item list-group-item-action">
-            Catálogos auxiliares
-          </a>
-        </div>
-
       </div>
-    </aside>
+    </nav>
 
-    <!-- Conteúdo principal -->
-    <main class="col-12 col-md-9 col-lg-10 p-3">
-      <div th:insert="${content}"></div>
-    </main>
-  </div>
-</div>
+    <!-- Container principal -->
+    <div class="container-fluid">
+      <div class="row">
+        <!-- Sidebar -->
+        <aside class="col-12 col-md-3 col-lg-2 border-end bg-white min-vh-100 p-0" sec:authorize="isAuthenticated()">
+          <div class="list-group list-group-flush">
+            <!-- Dashboard comum -->
+            <a th:href="@{/home}" class="list-group-item list-group-item-action">
+              Dashboard
+            </a>
 
-<!-- Bootstrap bundle -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+            <!-- Menu da loja -->
+            <div sec:authorize="hasRole('LOJA')">
+              <div class="list-group-item small text-muted">Operação</div>
+              <a th:href="@{/loja/visitas}" class="list-group-item list-group-item-action">
+                Minhas visitas
+              </a>
+            </div>
 
-</body>
+            <!-- Menu admin/super -->
+            <div sec:authorize="hasAnyRole('ADMIN','SUPER')">
+              <div class="list-group-item small text-muted">Administração</div>
+              <a th:href="@{/admin/tokens}" class="list-group-item list-group-item-action">
+                Tokens de cadastro
+              </a>
+              <a th:href="@{/admin/users}" class="list-group-item list-group-item-action">
+                Usuários
+              </a>
+              <a th:href="@{/admin/stores}" class="list-group-item list-group-item-action">
+                Lojas
+              </a>
+              <a th:href="@{/admin/visitas}" class="list-group-item list-group-item-action">
+                Agenda de visitas
+              </a>
+              <a th:href="@{/admin/catalogos}" class="list-group-item list-group-item-action">
+                Catálogos auxiliares
+              </a>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Conteúdo principal -->
+        <main class="col-12 col-md-9 col-lg-10 p-3">
+          <div th:insert="${content}"></div>
+        </main>
+      </div>
+    </div>
+
+    <!-- Bootstrap bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
 </html>
