@@ -127,20 +127,111 @@
 
         <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-3">
           <div class="btn-group btn-group-sm" role="group" aria-label="Filtro de lojas">
-            <a th:href="@{/home(status='ativos', dia=${rawDayFilter})}" class="btn btn-outline-success"
+            <a th:href="@{/home(status='ativos', dia=${rawDayFilter}, storeId=${adminSelectedStore != null ? adminSelectedStore.id : null}, inicio=${adminStartDate}, fim=${adminEndDate})}"
+               class="btn btn-outline-success"
                th:classappend="${storeFilter == 'ativos'} ? ' active'">Ativas</a>
-            <a th:href="@{/home(status='inativos', dia=${rawDayFilter})}" class="btn btn-outline-success"
+            <a th:href="@{/home(status='inativos', dia=${rawDayFilter}, storeId=${adminSelectedStore != null ? adminSelectedStore.id : null}, inicio=${adminStartDate}, fim=${adminEndDate})}"
+               class="btn btn-outline-success"
                th:classappend="${storeFilter == 'inativos'} ? ' active'">Inativas</a>
-            <a th:href="@{/home(status='todos', dia=${rawDayFilter})}" class="btn btn-outline-success"
+            <a th:href="@{/home(status='todos', dia=${rawDayFilter}, storeId=${adminSelectedStore != null ? adminSelectedStore.id : null}, inicio=${adminStartDate}, fim=${adminEndDate})}"
+               class="btn btn-outline-success"
                th:classappend="${storeFilter == 'todos'} ? ' active'">Todas</a>
           </div>
           <form method="get" class="d-flex align-items-center gap-2">
             <input type="hidden" name="status" th:value="${storeFilter}">
+            <input type="hidden" name="storeId" th:value="${adminSelectedStore != null ? adminSelectedStore.id : null}">
+            <input type="hidden" name="inicio" th:value="${adminStartDate}">
+            <input type="hidden" name="fim" th:value="${adminEndDate}">
             <select class="form-select form-select-sm" name="dia">
               <option th:each="option : ${availableDays}" th:value="${option}" th:selected="${option == rawDayFilter}" th:text="${option == 'todas' ? 'Todos os dias' : #strings.capitalize(option)}"></option>
             </select>
             <button class="btn btn-outline-success btn-sm" type="submit">Filtrar dia</button>
           </form>
+        </div>
+
+        <div class="card shadow-sm mb-4">
+          <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+              <input type="hidden" name="status" th:value="${storeFilter}">
+              <input type="hidden" name="dia" th:value="${rawDayFilter}">
+              <div class="col-md-4">
+                <label class="form-label">Loja</label>
+                <select class="form-select" name="storeId">
+                  <option value="">Consolidado (todas)</option>
+                  <option th:each="store : ${storeSelection}" th:value="${store.id}"
+                          th:selected="${adminSelectedStore != null and store.id == adminSelectedStore.id}"
+                          th:text="${store.name}"></option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Início</label>
+                <input type="date" class="form-control" name="inicio" th:value="${adminStartDate}">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Fim</label>
+                <input type="date" class="form-control" name="fim" th:value="${adminEndDate}">
+              </div>
+              <div class="col-md-2 text-md-end">
+                <button class="btn btn-success w-100" type="submit">Aplicar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+          <div class="col-sm-6 col-xl-3">
+            <div class="card shadow-sm h-100">
+              <div class="card-body">
+                <div class="small text-muted">Visitas no período</div>
+                <div class="fs-3 fw-semibold" th:text="${adminTotalVisits}">0</div>
+                <div class="text-muted small">Período: <span th:text="${#temporals.format(adminStartDate, 'dd/MM')} + ' a ' + #temporals.format(adminEndDate, 'dd/MM')}">01/01 a 31/01</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-6 col-xl-3">
+            <div class="card shadow-sm h-100">
+              <div class="card-body">
+                <div class="small text-muted">Concluídas</div>
+                <div class="fs-3 fw-semibold" th:text="${adminCompletedCount}">0</div>
+                <div class="text-muted small">Reabertas: <span th:text="${adminReopenedCount}">0</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-6 col-xl-3">
+            <div class="card shadow-sm h-100">
+              <div class="card-body">
+                <div class="small text-muted">Pendentes</div>
+                <div class="fs-3 fw-semibold" th:text="${adminPendingCount}">0</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-6 col-xl-3">
+            <div class="card shadow-sm h-100">
+              <div class="card-body">
+                <div class="small text-muted">Não realizadas</div>
+                <div class="fs-3 fw-semibold" th:text="${adminNoShowCount}">0</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+          <div class="col-12 col-lg-6">
+            <div class="card shadow-sm h-100">
+              <div class="card-body">
+                <h5 class="card-title">Resumo por status</h5>
+                <canvas id="adminStatusChart" height="220"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="col-12 col-lg-6">
+            <div class="card shadow-sm h-100">
+              <div class="card-body">
+                <h5 class="card-title">Visitas por dia</h5>
+                <canvas id="adminDailyChart" height="220"></canvas>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="table-responsive bg-white shadow-sm rounded mb-4">
@@ -168,15 +259,7 @@
 
         <div class="card shadow-sm">
           <div class="card-body">
-            <h5 class="card-title">Próximas visitas por dia</h5>
-            <p class="text-muted mb-3">Filtradas por: <strong th:text="${dayFilter}">Todas</strong></p>
-            <div class="table-responsive">
-              <table class="table table-sm mb-0">
-                <thead>
-                  <tr>
-                    <th>Data</th>
-                    <th>Lojas</th>
-                    <th>Modalidade</th>
+@@ -180,26 +271,81 @@
                     <th>Fornecedor</th>
                     <th>Comprador</th>
                   </tr>
@@ -202,4 +285,59 @@
       </div>
     </th:block>
   </th:block>
+  <script th:inline="javascript">
+    const adminStatusLabels = /*[[${adminStatusLabels}]]*/ [];
+    const adminStatusValues = /*[[${adminStatusValues}]]*/ [];
+    const adminDailyLabels = /*[[${adminDailyLabels}]]*/ [];
+    const adminDailyValues = /*[[${adminDailyValues}]]*/ [];
+
+    const adminStatusCtx = document.getElementById('adminStatusChart');
+    if (adminStatusCtx && adminStatusLabels.length > 0) {
+      new Chart(adminStatusCtx, {
+        type: 'doughnut',
+        data: {
+          labels: adminStatusLabels,
+          datasets: [{
+            data: adminStatusValues,
+            backgroundColor: ['#2e7d32', '#ffc107', '#dc3545', '#0dcaf0']
+          }]
+        },
+        options: {
+          plugins: {
+            legend: {
+              position: 'bottom'
+            }
+          }
+        }
+      });
+    }
+
+    const adminDailyCtx = document.getElementById('adminDailyChart');
+    if (adminDailyCtx && adminDailyLabels.length > 0) {
+      new Chart(adminDailyCtx, {
+        type: 'line',
+        data: {
+          labels: adminDailyLabels,
+          datasets: [{
+            label: 'Visitas',
+            data: adminDailyValues,
+            borderColor: '#2e7d32',
+            backgroundColor: 'rgba(46, 125, 50, 0.2)',
+            tension: 0.3,
+            fill: true
+          }]
+        },
+        options: {
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                precision: 0
+              }
+            }
+          }
+        }
+      });
+    }
+  </script>
 </html>
