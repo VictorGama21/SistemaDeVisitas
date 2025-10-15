@@ -94,8 +94,8 @@
                 </thead>
                 <tbody>
                   <tr th:each="visit : ${storeVisits}">
-                    <td th:text="${#temporals.format(visit.scheduledDate, 'dd/MM/yyyy')}">10/06/2024</td>
-                    <td th:text="${visit.modality.label}">Promotoria - Reposição</td>
+                    <td th:text="${visit.scheduledDate != null ? #temporals.format(visit.scheduledDate, 'dd/MM/yyyy') : '-'}">10/06/2024</td>
+                    <td th:text="${visit.modality != null ? visit.modality.label : '-'}">Promotoria - Reposição</td>
                     <td th:text="${visit.buyer != null ? visit.buyer.name : '-'}">-</td>
                     <td th:text="${visit.supplier != null ? visit.supplier.name : '-'}">-</td>
                     <td><span class="badge text-bg-secondary" th:text="${visit.status}">PENDING</span></td>
