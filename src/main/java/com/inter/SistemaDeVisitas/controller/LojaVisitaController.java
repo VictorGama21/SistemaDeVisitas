@@ -196,6 +196,10 @@ public class LojaVisitaController {
           .collect(Collectors.toList()));
       model.addAttribute("dailyChartLabels", Collections.emptyList());
       model.addAttribute("dailyChartValues", Collections.emptyList());
+      model.addAttribute("dailyChartValues", Collections.emptyList());
+      model.addAttribute("hasOverduePending", false);
+      model.addAttribute("overduePendingCount", 0L);
+      model.addAttribute("today", LocalDate.now());      
     }
     return "loja/visitas";
   }
