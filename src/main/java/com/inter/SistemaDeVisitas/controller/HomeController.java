@@ -4,9 +4,12 @@ import com.inter.SistemaDeVisitas.entity.RoleGroup;
 import com.inter.SistemaDeVisitas.entity.Store;
 import com.inter.SistemaDeVisitas.entity.User;
 import com.inter.SistemaDeVisitas.entity.Visit;
+import com.inter.SistemaDeVisitas.entity.VisitStatus;
 import com.inter.SistemaDeVisitas.repo.StoreRepository;
 import com.inter.SistemaDeVisitas.repo.UserRepository;
 import com.inter.SistemaDeVisitas.repo.VisitRepository;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -18,9 +21,8 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.TextStyle;
 import java.time.temporal.TemporalAdjusters;
-import java.util.List;
-import java.util.Locale;
-import java.util.Optional;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -54,7 +56,13 @@ public class HomeController {
                      Authentication authentication,
                      @RequestParam(name = "status", required = false) String storeStatusFilter,
                      @RequestParam(name = "dia", required = false) String dayFilter,
-                     @RequestParam(name = "semana", required = false) Integer weekOffsetParam) {
+                     @RequestParam(name = "semana", required = false) Integer weekOffsetParam,
+                     @RequestParam(name = "storeId", required = false) Long storeId,
+                     @RequestParam(name = "inicio", required = false)
+                     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+                     @RequestParam(name = "fim", required = false)
+                     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+                     HttpServletRequest request) {
     if (authentication == null) {
       return "redirect:/login";
     }
@@ -85,6 +93,48 @@ public class HomeController {
         default -> storeRepository.findByActiveTrueOrderByNameAsc();
       };
 
+      Store selectedStore = null;
+      if (storeId != null) {
+        selectedStore = storeRepository.findById(storeId).orElse(null);
+      }
+
+      LocalDate defaultEnd = Optional.ofNullable(endDate).orElse(today);
+      LocalDate defaultStart = Optional.ofNullable(startDate).orElse(defaultEnd.minusDays(29));
+      if (defaultEnd.isBefore(defaultStart)) {
+        LocalDate swap = defaultStart;
+        defaultStart = defaultEnd;
+        defaultEnd = swap;
+      }
+
+      Map<VisitStatus, Long> statusSummary = new EnumMap<>(VisitStatus.class);
+      for (Object[] row : visitRepository.countByStoreAndStatusBetween(selectedStore, defaultStart, defaultEnd)) {
+        VisitStatus status = (VisitStatus) row[0];
+        Long total = (Long) row[1];
+        statusSummary.put(status, total);
+      }
+
+      NavigableMap<LocalDate, Long> dailySummary = new TreeMap<>();
+      for (Object[] row : visitRepository.countDailyByStoreBetween(selectedStore, defaultStart, defaultEnd)) {
+        LocalDate date = (LocalDate) row[0];
+        Long total = (Long) row[1];
+        dailySummary.put(date, total);
+      }
+
+      List<String> adminStatusLabels = Arrays.stream(VisitStatus.values())
+          .map(HomeController::labelForStatus)
+          .toList();
+      List<Long> adminStatusValues = Arrays.stream(VisitStatus.values())
+          .map(status -> statusSummary.getOrDefault(status, 0L))
+          .toList();
+      long adminTotalVisits = adminStatusValues.stream().mapToLong(Long::longValue).sum();
+
+      DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM");
+      List<String> adminDailyLabels = dailySummary.keySet().stream()
+          .map(formatter::format)
+          .toList();
+      List<Long> adminDailyValues = new ArrayList<>(dailySummary.values());
+
+      model.addAttribute("storeSelection", storeRepository.findByActiveTrueOrderByNameAsc());
       DayOfWeek selectedDay = parseDayFilter(dayFilter);
       List<Visit> upcomingVisits = visitRepository.findTop20ByScheduledDateGreaterThanEqualOrderByScheduledDateAsc(today);
       if (selectedDay != null) {
@@ -101,6 +151,19 @@ public class HomeController {
       model.addAttribute("rawDayFilter", Optional.ofNullable(dayFilter).orElse("todas"));
       model.addAttribute("availableDays", buildDayFilterOptions());
       model.addAttribute("upcomingVisits", upcomingVisits);
+      model.addAttribute("adminSelectedStore", selectedStore);
+      model.addAttribute("adminStartDate", defaultStart);
+      model.addAttribute("adminEndDate", defaultEnd);
+      model.addAttribute("adminStatusLabels", adminStatusLabels);
+      model.addAttribute("adminStatusValues", adminStatusValues);
+      model.addAttribute("adminDailyLabels", adminDailyLabels);
+      model.addAttribute("adminDailyValues", adminDailyValues);
+      model.addAttribute("adminStatusSummary", statusSummary);
+      model.addAttribute("adminTotalVisits", adminTotalVisits);
+      model.addAttribute("adminCompletedCount", statusSummary.getOrDefault(VisitStatus.COMPLETED, 0L));
+      model.addAttribute("adminPendingCount", statusSummary.getOrDefault(VisitStatus.PENDING, 0L));
+      model.addAttribute("adminNoShowCount", statusSummary.getOrDefault(VisitStatus.NO_SHOW, 0L));
+      model.addAttribute("adminReopenedCount", statusSummary.getOrDefault(VisitStatus.REOPENED, 0L));
     } else if (isStoreUser) {
       Store store = currentUser.getStore();
       if (store != null) {
@@ -126,14 +189,7 @@ public class HomeController {
       model.addAttribute("availableStores", storeRepository.findByActiveTrueOrderByNameAsc());
       model.addAttribute("showAdminShortcuts", false);
     } else {
-      visitasHoje = visitRepository.countByScheduledDateBetween(today, today);
-      clientesAtivos = userRepository.countByRoleGroupAndEnabledTrue(RoleGroup.LOJA);
-      model.addAttribute("showAdminShortcuts", false);
-    }
-
-    model.addAttribute("visitasHoje", visitasHoje);
-    model.addAttribute("clientesAtivos", clientesAtivos);
-    model.addAttribute("isAdmin", isAdmin);
+@@ -137,26 +200,35 @@ public class HomeController {
     model.addAttribute("isStoreUser", isStoreUser);
 
     return "home";
@@ -158,5 +214,14 @@ public class HomeController {
 
   private List<String> buildDayFilterOptions() {
     return List.of("todas", "segunda", "terca", "quarta", "quinta", "sexta", "sabado", "domingo");
+  }
+
+  private static String labelForStatus(VisitStatus status) {
+    return switch (status) {
+      case COMPLETED -> "Concluída";
+      case PENDING -> "Pendente";
+      case NO_SHOW -> "Não realizada";
+      case REOPENED -> "Reaberta";
+    };
   }
 }
