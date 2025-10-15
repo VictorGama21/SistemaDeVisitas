@@ -54,7 +54,13 @@ public class RegisterController {
 
         model.addAttribute("fullName", sanitizedFullName);
         model.addAttribute("email", normalizedEmail);
-
+        
+        if (password == null || confirmPassword == null ||
+                password.isBlank() || confirmPassword.isBlank()) {
+            model.addAttribute("error", "Informe e confirme a senha.");
+            return "register";
+        }
+        
         // validações simples
         if (!password.equals(confirmPassword)) {
             model.addAttribute("error", "As senhas não coincidem.");
