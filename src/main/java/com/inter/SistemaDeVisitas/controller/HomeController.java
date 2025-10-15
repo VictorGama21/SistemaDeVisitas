@@ -108,16 +108,16 @@ public class HomeController {
 
       Map<VisitStatus, Long> statusSummary = new EnumMap<>(VisitStatus.class);
       for (Object[] row : visitRepository.countByStoreAndStatusBetween(selectedStore, defaultStart, defaultEnd)) {
-        VisitStatus status = (VisitStatus) row[0];
-        Long total = (Long) row[1];
-        statusSummary.put(status, total);
+        VisitStatus status = row[0] instanceof VisitStatus ? (VisitStatus) row[0] : VisitStatus.PENDING;
+        long total = row[1] instanceof Number ? ((Number) row[1]).longValue() : 0L;
+        statusSummary.merge(status, total, Long::sum);
       }
 
       NavigableMap<LocalDate, Long> dailySummary = new TreeMap<>();
       for (Object[] row : visitRepository.countDailyByStoreBetween(selectedStore, defaultStart, defaultEnd)) {
         LocalDate date = (LocalDate) row[0];
-        Long total = (Long) row[1];
-        dailySummary.put(date, total);
+        long total = row[1] instanceof Number ? ((Number) row[1]).longValue() : 0L;
+        dailySummary.merge(date, total, Long::sum);
       }
 
       List<String> adminStatusLabels = Arrays.stream(VisitStatus.values())
