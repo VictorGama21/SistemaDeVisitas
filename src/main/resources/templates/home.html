@@ -21,13 +21,14 @@
         <div class="col-sm-6 col-lg-3">
           <div class="card shadow-sm">
             <div class="card-body">
-              <div class="small text-muted">Usuario Loja ativos</div>
+              <div class="small text-muted">Usuários Loja ativos</div>
               <div class="fs-3 fw-semibold" th:text="${clientesAtivos}">0</div>
             </div>
           </div>
         </div>
       </div>
 
+      <!-- BLOCO LOJA -->
       <div class="mt-4" th:if="${isStoreUser}">
         <div th:if="${needsStoreAssociation}">
           <div class="alert alert-info" role="alert">
@@ -67,7 +68,8 @@
             <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-3 gap-2">
               <div>
                 <h5 class="card-title mb-0">Visitas da semana</h5>
-                <small class="text-muted" th:text="${#temporals.format(weekStart, 'dd/MM')} + ' a ' + #temporals.format(weekEnd, 'dd/MM')">10/06 a 16/06</small>
+                <small class="text-muted"
+                       th:text="|${#temporals.format(weekStart,'dd/MM')} a ${#temporals.format(weekEnd,'dd/MM')}|">10/06 a 16/06</small>
               </div>
               <form method="get" class="d-flex align-items-center gap-2">
                 <input type="hidden" name="status" th:value="${param.status}">
@@ -111,6 +113,7 @@
         </div>
       </div>
 
+      <!-- BLOCO ADMIN -->
       <div class="mt-4" th:if="${isAdmin}">
         <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-3">
           <div>
@@ -149,72 +152,6 @@
           </form>
         </div>
 
-        <div class="card shadow-sm mb-4">
-          <div class="card-body">
-            <form method="get" class="row g-3 align-items-end">
-              <input type="hidden" name="status" th:value="${storeFilter}">
-              <input type="hidden" name="dia" th:value="${rawDayFilter}">
-              <div class="col-md-4">
-                <label class="form-label">Loja</label>
-                <select class="form-select" name="storeId">
-                  <option value="">Consolidado (todas)</option>
-                  <option th:each="store : ${storeSelection}" th:value="${store.id}"
-                          th:selected="${adminSelectedStore != null and store.id == adminSelectedStore.id}"
-                          th:text="${store.name}"></option>
-                </select>
-              </div>
-              <div class="col-md-3">
-                <label class="form-label">Início</label>
-                <input type="date" class="form-control" name="inicio" th:value="${adminStartDate}">
-              </div>
-              <div class="col-md-3">
-                <label class="form-label">Fim</label>
-                <input type="date" class="form-control" name="fim" th:value="${adminEndDate}">
-              </div>
-              <div class="col-md-2 text-md-end">
-                <button class="btn btn-success w-100" type="submit">Aplicar</button>
-              </div>
-            </form>
-          </div>
-        </div>
-
-        <div class="row g-3 mb-4">
-          <div class="col-sm-6 col-xl-3">
-            <div class="card shadow-sm h-100">
-              <div class="card-body">
-                <div class="small text-muted">Visitas no período</div>
-                <div class="fs-3 fw-semibold" th:text="${adminTotalVisits}">0</div>
-                <div class="text-muted small">Período: <span th:text="${#temporals.format(adminStartDate, 'dd/MM')} + ' a ' + #temporals.format(adminEndDate, 'dd/MM')}">01/01 a 31/01</span></div>
-              </div>
-            </div>
-          </div>
-          <div class="col-sm-6 col-xl-3">
-            <div class="card shadow-sm h-100">
-              <div class="card-body">
-                <div class="small text-muted">Concluídas</div>
-                <div class="fs-3 fw-semibold" th:text="${adminCompletedCount}">0</div>
-                <div class="text-muted small">Reabertas: <span th:text="${adminReopenedCount}">0</span></div>
-              </div>
-            </div>
-          </div>
-          <div class="col-sm-6 col-xl-3">
-            <div class="card shadow-sm h-100">
-              <div class="card-body">
-                <div class="small text-muted">Pendentes</div>
-                <div class="fs-3 fw-semibold" th:text="${adminPendingCount}">0</div>
-              </div>
-            </div>
-          </div>
-          <div class="col-sm-6 col-xl-3">
-            <div class="card shadow-sm h-100">
-              <div class="card-body">
-                <div class="small text-muted">Não realizadas</div>
-                <div class="fs-3 fw-semibold" th:text="${adminNoShowCount}">0</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <div class="row g-3 mb-4">
           <div class="col-12 col-lg-6">
             <div class="card shadow-sm h-100">
@@ -234,57 +171,11 @@
           </div>
         </div>
 
-        <div class="table-responsive bg-white shadow-sm rounded mb-4">
-          <table class="table mb-0 align-middle">
-            <thead>
-              <tr>
-                <th>Nome</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr th:each="store : ${stores}">
-                <td th:text="${store.name}">Loja XPTO</td>
-                <td>
-                  <span class="badge" th:classappend="${store.active} ? ' text-bg-success' : ' text-bg-secondary'"
-                        th:text="${store.active} ? 'Ativa' : 'Inativa'">Ativa</span>
-                </td>
-              </tr>
-              <tr th:if="${#lists.isEmpty(stores)}">
-                <td colspan="2" class="text-center text-muted py-3">Nenhuma loja cadastrada.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div class="card shadow-sm">
-          <div class="card-body">
-@@ -180,26 +271,81 @@
-                    <th>Fornecedor</th>
-                    <th>Comprador</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr th:each="visit : ${upcomingVisits}">
-                    <td th:text="${#temporals.format(visit.scheduledDate, 'dd/MM/yyyy')}">10/06/2024</td>
-                    <td>
-                      <span class="badge text-bg-light me-1" th:each="store : ${visit.stores}" th:text="${store.name}"></span>
-                    </td>
-                    <td th:text="${visit.modality.label}">Promotoria - Reposição</td>
-                    <td th:text="${visit.supplier != null ? visit.supplier.name : '-'}">-</td>
-                    <td th:text="${visit.buyer != null ? visit.buyer.name : '-'}">-</td>
-                  </tr>
-                  <tr th:if="${#lists.isEmpty(upcomingVisits)}">
-                    <td colspan="5" class="text-center text-muted py-3">Nenhuma visita encontrada para o filtro selecionado.</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
       </div>
     </th:block>
   </th:block>
+
+  <!-- Chart.js -->
   <script th:inline="javascript">
     const adminStatusLabels = /*[[${adminStatusLabels}]]*/ [];
     const adminStatusValues = /*[[${adminStatusValues}]]*/ [];
@@ -303,11 +194,7 @@
           }]
         },
         options: {
-          plugins: {
-            legend: {
-              position: 'bottom'
-            }
-          }
+          plugins: { legend: { position: 'bottom' } }
         }
       });
     }
@@ -328,14 +215,7 @@
           }]
         },
         options: {
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: {
-                precision: 0
-              }
-            }
-          }
+          scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
         }
       });
     }
