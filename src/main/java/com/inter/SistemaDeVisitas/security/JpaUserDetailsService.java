@@ -1,5 +1,6 @@
 package com.inter.SistemaDeVisitas.security;
 
+import com.inter.SistemaDeVisitas.entity.RoleGroup;
 import com.inter.SistemaDeVisitas.entity.User;
 import com.inter.SistemaDeVisitas.repo.UserRepository;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
