@@ -1,5 +1,3 @@
-package com.inter.SistemaDeVisitas.entity;
-
 import java.text.Normalizer;
 
 public enum VisitModality {
@@ -25,6 +23,7 @@ public enum VisitModality {
         .replaceAll("[^\\p{ASCII}]", "")
         .replace("-", " ")
         .replace("/", " ")
+        .replaceAll("\\s+", " ")
         .trim()
         .toUpperCase();
     for (VisitModality modality : values()) {
@@ -35,6 +34,7 @@ public enum VisitModality {
           .replaceAll("[^\\p{ASCII}]", "")
           .replace("-", " ")
           .replace("/", " ")
+          .replaceAll("\\s+", " ")
           .trim()
           .toUpperCase();
       if (normalizedLabel.equals(trimmed)) {
