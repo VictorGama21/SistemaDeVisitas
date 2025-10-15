@@ -81,7 +81,14 @@ public class LojaVisitaController {
         normalizedEnd = swap;
       }
 
-      List<Visit> storeVisits = new ArrayList<>(visits.findByStoreOrderByScheduledDateDesc(store));
+      List<Visit> allStoreVisits = visits.findByStoreOrderByScheduledDateDesc(store);
+      List<Visit> storeVisits = new ArrayList<>(allStoreVisits);
+
+      long overduePendingCount = allStoreVisits.stream()
+          .filter(v -> v.getStatus() == VisitStatus.PENDING)
+          .filter(v -> v.getScheduledDate() != null && v.getScheduledDate().isBefore(today))
+          .count();
+      boolean hasOverduePending = overduePendingCount > 0;
 
       if (normalizedStart != null) {
         LocalDate finalStart = normalizedStart;
