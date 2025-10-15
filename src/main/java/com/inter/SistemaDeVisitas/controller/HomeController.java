@@ -189,7 +189,15 @@ public class HomeController {
       model.addAttribute("availableStores", storeRepository.findByActiveTrueOrderByNameAsc());
       model.addAttribute("showAdminShortcuts", false);
     } else {
-@@ -137,26 +200,35 @@ public class HomeController {
+      visitasHoje = visitRepository.countByScheduledDateBetween(today, today);
+      clientesAtivos = 0;
+      model.addAttribute("showAdminShortcuts", false);
+    }
+
+    model.addAttribute("visitasHoje", visitasHoje);
+    model.addAttribute("clientesAtivos", clientesAtivos);
+    model.addAttribute("currentUser", currentUser);
+    model.addAttribute("isAdmin", isAdmin);
     model.addAttribute("isStoreUser", isStoreUser);
 
     return "home";
@@ -215,13 +223,3 @@ public class HomeController {
   private List<String> buildDayFilterOptions() {
     return List.of("todas", "segunda", "terca", "quarta", "quinta", "sexta", "sabado", "domingo");
   }
-
-  private static String labelForStatus(VisitStatus status) {
-    return switch (status) {
-      case COMPLETED -> "Concluída";
-      case PENDING -> "Pendente";
-      case NO_SHOW -> "Não realizada";
-      case REOPENED -> "Reaberta";
-    };
-  }
-}
