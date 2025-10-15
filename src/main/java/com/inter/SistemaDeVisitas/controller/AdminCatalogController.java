@@ -48,7 +48,21 @@ public class AdminCatalogController {
   public String index(Model model,
                       @RequestParam(name = "buyerPage", defaultValue = "0") int buyerPage,
                       @RequestParam(name = "supplierPage", defaultValue = "0") int supplierPage,
-  public class AdminCatalogController {
+                      @RequestParam(name = "segmentPage", defaultValue = "0") int segmentPage,
+                      @RequestParam(name = "buyerSearch", required = false) String buyerSearch,
+                      @RequestParam(name = "supplierSearch", required = false) String supplierSearch,
+                      @RequestParam(name = "segmentSearch", required = false) String segmentSearch,
+                      HttpServletRequest request) {
+
+    PageRequest buyerPageable = PageRequest.of(buyerPage, 10, Sort.by("name").ascending());
+    PageRequest supplierPageable = PageRequest.of(supplierPage, 10, Sort.by("name").ascending());
+    PageRequest segmentPageable = PageRequest.of(segmentPage, 10, Sort.by("name").ascending());
+
+    Page<Buyer> buyerResults = StringUtils.hasText(buyerSearch)
+        ? buyers.findByNameContainingIgnoreCaseOrderByNameAsc(buyerSearch.trim(), buyerPageable)
+        : buyers.findAll(buyerPageable);
+
+    Page<Supplier> supplierResults = StringUtils.hasText(supplierSearch)
         ? suppliers.findByNameContainingIgnoreCaseOrderByNameAsc(supplierSearch.trim(), supplierPageable)
         : suppliers.findAll(supplierPageable);
 
@@ -59,12 +73,17 @@ public class AdminCatalogController {
     model.addAttribute("buyerPage", buyerResults);
     model.addAttribute("supplierPage", supplierResults);
     model.addAttribute("segmentPage", segmentResults);
+
     model.addAttribute("buyerSearch", buyerSearch);
     model.addAttribute("supplierSearch", supplierSearch);
     model.addAttribute("segmentSearch", segmentSearch);
-    model.addAttribute("catalogQuery", Optional.ofNullable(request.getQueryString()).orElse(""));
+
+    model.addAttribute("catalogQuery",
+        Optional.ofNullable(request.getQueryString()).orElse(""));
+
     return "admin/catalogos";
   }
+
 
   @PostMapping("/compradores")
   public String createBuyer(@RequestParam String name,
