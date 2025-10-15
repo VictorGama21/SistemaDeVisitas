@@ -50,8 +50,8 @@ public interface VisitRepository extends JpaRepository<Visit, Long> {
       select v.status as status, count(distinct v) as total
       from Visit v join v.stores s
       where (:store is null or s = :store)
-        and (:start is null or v.scheduledDate >= :start)
-        and (:end is null or v.scheduledDate <= :end)
+        and v.scheduledDate >= coalesce(:start, v.scheduledDate)
+        and v.scheduledDate <= coalesce(:end, v.scheduledDate)
       group by v.status
       order by v.status
       """)
@@ -63,8 +63,8 @@ public interface VisitRepository extends JpaRepository<Visit, Long> {
       select v.scheduledDate as scheduledDate, count(distinct v) as total
       from Visit v join v.stores s
       where (:store is null or s = :store)
-        and (:start is null or v.scheduledDate >= :start)
-        and (:end is null or v.scheduledDate <= :end)
+        and v.scheduledDate >= coalesce(:start, v.scheduledDate)
+        and v.scheduledDate <= coalesce(:end, v.scheduledDate)
       group by v.scheduledDate
       order by v.scheduledDate asc
       """)
