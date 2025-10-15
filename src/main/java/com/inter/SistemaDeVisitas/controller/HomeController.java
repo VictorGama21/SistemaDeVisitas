@@ -203,6 +203,15 @@ public class HomeController {
     return "home";
   }
 
+  private static String labelForStatus(VisitStatus status) {
+    return switch (status) {
+      case PENDING -> "Pendentes";
+      case COMPLETED -> "Concluídas";
+      case NO_SHOW -> "Não compareceu";
+      case REOPENED -> "Reabertas";
+    };
+  }
+
   private DayOfWeek parseDayFilter(String input) {
     if (input == null || input.isBlank() || "todas".equalsIgnoreCase(input)) {
       return null;
@@ -223,3 +232,4 @@ public class HomeController {
   private List<String> buildDayFilterOptions() {
     return List.of("todas", "segunda", "terca", "quarta", "quinta", "sexta", "sabado", "domingo");
   }
+}
