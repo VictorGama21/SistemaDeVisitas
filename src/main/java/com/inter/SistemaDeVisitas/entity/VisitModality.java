@@ -1,3 +1,5 @@
+package com.inter.SistemaDeVisitas.entity;
+
 import java.text.Normalizer;
 
 public enum VisitModality {
