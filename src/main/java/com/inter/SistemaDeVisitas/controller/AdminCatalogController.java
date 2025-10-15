@@ -1,5 +1,4 @@
 package com.inter.SistemaDeVisitas.controller;
-
 import com.inter.SistemaDeVisitas.entity.Buyer;
 import com.inter.SistemaDeVisitas.entity.Segment;
 import com.inter.SistemaDeVisitas.entity.Supplier;
@@ -30,232 +29,363 @@ import java.util.function.Function;
 @PreAuthorize("hasAnyRole('ADMIN','SUPER')")
 public class AdminCatalogController {
 
-    private final BuyerRepository buyers;
-    private final SupplierRepository suppliers;
-    private final SegmentRepository segments;
-    private final CsvImportService csvImportService;
+  private final BuyerRepository buyers;
+  private final SupplierRepository suppliers;
+  private final SegmentRepository segments;
+  private final CsvImportService csvImportService;
 
-    private static final int PAGE_SIZE = 10;
+  private static final int PAGE_SIZE = 10;
 
-    public AdminCatalogController(
-            BuyerRepository buyers,
-            SupplierRepository suppliers,
-            SegmentRepository segments,
-            CsvImportService csvImportService
-    ) {
-        this.buyers = buyers;
-        this.suppliers = suppliers;
-        this.segments = segments;
-        this.csvImportService = csvImportService;
+  public AdminCatalogController(BuyerRepository buyers,
+                                SupplierRepository suppliers,
+                                SegmentRepository segments,
+                                CsvImportService csvImportService) {
+    this.buyers = buyers;
+    this.suppliers = suppliers;
+    this.segments = segments;
+    this.csvImportService = csvImportService;
+  }
+
+  @GetMapping
+  public String index(Model model,
+                      @RequestParam(name = "tab", defaultValue = "buyers") String activeTab,
+                      @RequestParam(name = "buyerPage", defaultValue = "0") int buyerPage,
+                      @RequestParam(name = "supplierPage", defaultValue = "0") int supplierPage,
+                      @RequestParam(name = "segmentPage", defaultValue = "0") int segmentPage) {
+    Page<Buyer> buyersPage = buyers.findAllByOrderByNameAsc(PageRequest.of(sanitizePage(buyerPage), PAGE_SIZE));
+    Page<Supplier> suppliersPage = suppliers.findAllByOrderByNameAsc(PageRequest.of(sanitizePage(supplierPage), PAGE_SIZE));
+    Page<Segment> segmentsPage = segments.findAllByOrderByNameAsc(PageRequest.of(sanitizePage(segmentPage), PAGE_SIZE));
+
+    model.addAttribute("activeTab", activeTab);
+    model.addAttribute("buyersPage", buyersPage);
+    model.addAttribute("suppliersPage", suppliersPage);
+    model.addAttribute("segmentsPage", segmentsPage);
+    model.addAttribute("pageSize", PAGE_SIZE);
+    return "admin/catalogos";
+  }
+
+  @PostMapping("/compradores")
+  public String createBuyer(@RequestParam String name,
+                            @RequestParam(name = "tab", defaultValue = "buyers") String tab,
+                            @RequestParam(name = "buyerPage", defaultValue = "0") int buyerPage,
+                            @RequestParam(name = "supplierPage", defaultValue = "0") int supplierPage,
+                            @RequestParam(name = "segmentPage", defaultValue = "0") int segmentPage,
+                            RedirectAttributes redirectAttributes) {
+    if (!StringUtils.hasText(name)) {
+      redirectAttributes.addFlashAttribute("errorMessage", "Informe um nome para o comprador.");
+      return redirectToCatalog(tab, buyerPage, supplierPage, segmentPage);
     }
+    buyers.findByNameIgnoreCase(name.trim()).ifPresentOrElse(existing -> {
+      existing.setActive(true);
+      buyers.save(existing);
+    }, () -> {
+      Buyer buyer = new Buyer();
+      buyer.setName(name.trim());
+      buyers.save(buyer);
+    });
+    redirectAttributes.addFlashAttribute("successMessage", "Comprador salvo com sucesso.");
+    return redirectToCatalog(tab, buyerPage, supplierPage, segmentPage);
+  }
 
-    @GetMapping
-    public String index(
-            Model model,
-            @RequestParam(name = "tab", defaultValue = "buyers") String activeTab,
-            @RequestParam(name = "buyerPage", defaultValue = "0") int buyerPage,
-            @RequestParam(name = "supplierPage", defaultValue = "0") int supplierPage,
-            @RequestParam(name = "segmentPage", defaultValue = "0") int segmentPage
-    ) {
-        Page<Buyer> buyersPage = buyers.findAllByOrderByNameAsc(PageRequest.of(sanitizePage(buyerPage), PAGE_SIZE));
-        Page<Supplier> suppliersPage = suppliers.findAllByOrderByNameAsc(PageRequest.of(sanitizePage(supplierPage), PAGE_SIZE));
-        Page<Segment> segmentsPage = segments.findAllByOrderByNameAsc(PageRequest.of(sanitizePage(segmentPage), PAGE_SIZE));
-
-        model.addAttribute("activeTab", activeTab);
-        model.addAttribute("buyersPage", buyersPage);
-        model.addAttribute("suppliersPage", suppliersPage);
-        model.addAttribute("segmentsPage", segmentsPage);
-        model.addAttribute("pageSize", PAGE_SIZE);
-
-        return "admin/catalogos";
+  @PostMapping("/fornecedores")
+  public String createSupplier(@RequestParam String name,
+                               @RequestParam(name = "tab", defaultValue = "suppliers") String tab,
+                               @RequestParam(name = "buyerPage", defaultValue = "0") int buyerPage,
+                               @RequestParam(name = "supplierPage", defaultValue = "0") int supplierPage,
+                               @RequestParam(name = "segmentPage", defaultValue = "0") int segmentPage,
+                               RedirectAttributes redirectAttributes) {
+    if (!StringUtils.hasText(name)) {
+      redirectAttributes.addFlashAttribute("errorMessage", "Informe um nome para o fornecedor.");
+      return redirectToCatalog(tab, buyerPage, supplierPage, segmentPage);
     }
+    suppliers.findByNameIgnoreCase(name.trim()).ifPresentOrElse(existing -> {
+      existing.setActive(true);
+      suppliers.save(existing);
+    }, () -> {
+      Supplier supplier = new Supplier();
+      supplier.setName(name.trim());
+      suppliers.save(supplier);
+    });
+    redirectAttributes.addFlashAttribute("successMessage", "Fornecedor salvo com sucesso.");
+    return redirectToCatalog(tab, buyerPage, supplierPage, segmentPage);
+  }
 
-    /* -------------------- CRIAÇÃO -------------------- */
+  @PostMapping("/segmentos")
+  public String createSegment(@RequestParam String name,
+                              @RequestParam(name = "tab", defaultValue = "segments") String tab,
+                              @RequestParam(name = "buyerPage", defaultValue = "0") int buyerPage,
+                              @RequestParam(name = "supplierPage", defaultValue = "0") int supplierPage,
+                              @RequestParam(name = "segmentPage", defaultValue = "0") int segmentPage,
+                              RedirectAttributes redirectAttributes) {
+    if (!StringUtils.hasText(name)) {
+      redirectAttributes.addFlashAttribute("errorMessage", "Informe um nome para o segmento.");
+      return redirectToCatalog(tab, buyerPage, supplierPage, segmentPage);
+    }
+    segments.findByNameIgnoreCase(name.trim()).ifPresentOrElse(existing -> {
+      existing.setActive(true);
+      segments.save(existing);
+    }, () -> {
+      Segment segment = new Segment();
+      segment.setName(name.trim());
+      segments.save(segment);
+    });
+    redirectAttributes.addFlashAttribute("successMessage", "Segmento salvo com sucesso.");
+    return redirectToCatalog(tab, buyerPage, supplierPage, segmentPage);
+  }
 
-    @PostMapping("/compradores")
-    public String createBuyer(
-            @RequestParam String name,
-            @RequestParam(name = "tab", defaultValue = "buyers") String tab,
-            @RequestParam(name = "buyerPage", defaultValue = "0") int buyerPage,
-            @RequestParam(name = "supplierPage", defaultValue = "0") int supplierPage,
-            @RequestParam(name = "segmentPage", defaultValue = "0") int segmentPage,
-            RedirectAttributes redirectAttributes
-    ) {
-        if (!StringUtils.hasText(name)) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Informe um nome para o comprador.");
-            return redirectToCatalog(tab, buyerPage, supplierPage, segmentPage);
+  @PostMapping("/compradores/{id}/status")
+  public String toggleBuyer(@PathVariable Long id,
+                            @RequestParam(name = "tab", defaultValue = "buyers") String tab,
+                            @RequestParam(name = "buyerPage", defaultValue = "0") int buyerPage,
+                            @RequestParam(name = "supplierPage", defaultValue = "0") int supplierPage,
+                            @RequestParam(name = "segmentPage", defaultValue = "0") int segmentPage) {
+    buyers.findById(id).ifPresent(buyer -> {
+      buyer.setActive(!buyer.isActive());
+      buyers.save(buyer);
+    });
+    return redirectToCatalog(tab, buyerPage, supplierPage, segmentPage);
+  }
+
+  @PostMapping("/fornecedores/{id}/status")
+  public String toggleSupplier(@PathVariable Long id,
+                               @RequestParam(name = "tab", defaultValue = "suppliers") String tab,
+                               @RequestParam(name = "buyerPage", defaultValue = "0") int buyerPage,
+                               @RequestParam(name = "supplierPage", defaultValue = "0") int supplierPage,
+                               @RequestParam(name = "segmentPage", defaultValue = "0") int segmentPage) {
+    suppliers.findById(id).ifPresent(supplier -> {
+      supplier.setActive(!supplier.isActive());
+      suppliers.save(supplier);
+    });
+    return redirectToCatalog(tab, buyerPage, supplierPage, segmentPage);
+  }
+
+  @PostMapping("/segmentos/{id}/status")
+  public String toggleSegment(@PathVariable Long id,
+                              @RequestParam(name = "tab", defaultValue = "segments") String tab,
+                              @RequestParam(name = "buyerPage", defaultValue = "0") int buyerPage,
+                              @RequestParam(name = "supplierPage", defaultValue = "0") int supplierPage,
+                              @RequestParam(name = "segmentPage", defaultValue = "0") int segmentPage) {
+    segments.findById(id).ifPresent(segment -> {
+      segment.setActive(!segment.isActive());
+      segments.save(segment);
+    });
+    return redirectToCatalog(tab, buyerPage, supplierPage, segmentPage);
+  }
+
+  @PostMapping("/compradores/{id}/editar")
+  public String updateBuyer(@PathVariable Long id,
+                            @RequestParam String name,
+                            @RequestParam(name = "tab", defaultValue = "buyers") String tab,
+                            @RequestParam(name = "buyerPage", defaultValue = "0") int buyerPage,
+                            @RequestParam(name = "supplierPage", defaultValue = "0") int supplierPage,
+                            @RequestParam(name = "segmentPage", defaultValue = "0") int segmentPage,
+                            RedirectAttributes redirectAttributes) {
+    if (!StringUtils.hasText(name)) {
+      redirectAttributes.addFlashAttribute("errorMessage", "Informe um nome válido para o comprador.");
+      return redirectToCatalog(tab, buyerPage, supplierPage, segmentPage);
+    }
+    String trimmed = name.trim();
+    Optional<Buyer> duplicate = buyers.findByNameIgnoreCase(trimmed);
+    if (duplicate.isPresent() && !duplicate.get().getId().equals(id)) {
+      redirectAttributes.addFlashAttribute("errorMessage", "Já existe um comprador com esse nome.");
+      return redirectToCatalog(tab, buyerPage, supplierPage, segmentPage);
+    }
+    buyers.findById(id).ifPresentOrElse(buyer -> {
+      buyer.setName(trimmed);
+      buyers.save(buyer);
+      redirectAttributes.addFlashAttribute("successMessage", "Comprador atualizado com sucesso.");
+    }, () -> redirectAttributes.addFlashAttribute("errorMessage", "Comprador não encontrado."));
+    return redirectToCatalog(tab, buyerPage, supplierPage, segmentPage);
+  }
+
+  @PostMapping("/fornecedores/{id}/editar")
+  public String updateSupplier(@PathVariable Long id,
+                               @RequestParam String name,
+                               @RequestParam(name = "tab", defaultValue = "suppliers") String tab,
+                               @RequestParam(name = "buyerPage", defaultValue = "0") int buyerPage,
+                               @RequestParam(name = "supplierPage", defaultValue = "0") int supplierPage,
+                               @RequestParam(name = "segmentPage", defaultValue = "0") int segmentPage,
+                               RedirectAttributes redirectAttributes) {
+    if (!StringUtils.hasText(name)) {
+      redirectAttributes.addFlashAttribute("errorMessage", "Informe um nome válido para o fornecedor.");
+      return redirectToCatalog(tab, buyerPage, supplierPage, segmentPage);
+    }
+    String trimmed = name.trim();
+    Optional<Supplier> duplicate = suppliers.findByNameIgnoreCase(trimmed);
+    if (duplicate.isPresent() && !duplicate.get().getId().equals(id)) {
+      redirectAttributes.addFlashAttribute("errorMessage", "Já existe um fornecedor com esse nome.");
+      return redirectToCatalog(tab, buyerPage, supplierPage, segmentPage);
+    }
+    suppliers.findById(id).ifPresentOrElse(supplier -> {
+      supplier.setName(trimmed);
+      suppliers.save(supplier);
+      redirectAttributes.addFlashAttribute("successMessage", "Fornecedor atualizado com sucesso.");
+    }, () -> redirectAttributes.addFlashAttribute("errorMessage", "Fornecedor não encontrado."));
+    return redirectToCatalog(tab, buyerPage, supplierPage, segmentPage);
+  }
+
+  @PostMapping("/segmentos/{id}/editar")
+  public String updateSegment(@PathVariable Long id,
+                              @RequestParam String name,
+                              @RequestParam(name = "tab", defaultValue = "segments") String tab,
+                              @RequestParam(name = "buyerPage", defaultValue = "0") int buyerPage,
+                              @RequestParam(name = "supplierPage", defaultValue = "0") int supplierPage,
+                              @RequestParam(name = "segmentPage", defaultValue = "0") int segmentPage,
+                              RedirectAttributes redirectAttributes) {
+    if (!StringUtils.hasText(name)) {
+      redirectAttributes.addFlashAttribute("errorMessage", "Informe um nome válido para o segmento.");
+      return redirectToCatalog(tab, buyerPage, supplierPage, segmentPage);
+    }
+    String trimmed = name.trim();
+    Optional<Segment> duplicate = segments.findByNameIgnoreCase(trimmed);
+    if (duplicate.isPresent() && !duplicate.get().getId().equals(id)) {
+      redirectAttributes.addFlashAttribute("errorMessage", "Já existe um segmento com esse nome.");
+      return redirectToCatalog(tab, buyerPage, supplierPage, segmentPage);
+    }
+    segments.findById(id).ifPresentOrElse(segment -> {
+      segment.setName(trimmed);
+      segments.save(segment);
+      redirectAttributes.addFlashAttribute("successMessage", "Segmento atualizado com sucesso.");
+    }, () -> redirectAttributes.addFlashAttribute("errorMessage", "Segmento não encontrado."));
+    return redirectToCatalog(tab, buyerPage, supplierPage, segmentPage);
+  }
+
+  @PostMapping("/compradores/{id}/excluir")
+  public String deleteBuyer(@PathVariable Long id,
+                            @RequestParam(name = "tab", defaultValue = "buyers") String tab,
+                            @RequestParam(name = "buyerPage", defaultValue = "0") int buyerPage,
+                            @RequestParam(name = "supplierPage", defaultValue = "0") int supplierPage,
+                            @RequestParam(name = "segmentPage", defaultValue = "0") int segmentPage,
+                            RedirectAttributes redirectAttributes) {
+    try {
+      buyers.deleteById(id);
+      redirectAttributes.addFlashAttribute("successMessage", "Comprador excluído com sucesso.");
+    } catch (DataIntegrityViolationException e) {
+      redirectAttributes.addFlashAttribute("errorMessage", "Não foi possível excluir o comprador: existem visitas associadas.");
+    }
+    return redirectToCatalog(tab, buyerPage, supplierPage, segmentPage);
+  }
+
+  @PostMapping("/fornecedores/{id}/excluir")
+  public String deleteSupplier(@PathVariable Long id,
+                               @RequestParam(name = "tab", defaultValue = "suppliers") String tab,
+                               @RequestParam(name = "buyerPage", defaultValue = "0") int buyerPage,
+                               @RequestParam(name = "supplierPage", defaultValue = "0") int supplierPage,
+                               @RequestParam(name = "segmentPage", defaultValue = "0") int segmentPage,
+                               RedirectAttributes redirectAttributes) {
+    try {
+      suppliers.deleteById(id);
+      redirectAttributes.addFlashAttribute("successMessage", "Fornecedor excluído com sucesso.");
+    } catch (DataIntegrityViolationException e) {
+      redirectAttributes.addFlashAttribute("errorMessage", "Não foi possível excluir o fornecedor: existem visitas associadas.");
+    }
+    return redirectToCatalog(tab, buyerPage, supplierPage, segmentPage);
+  }
+
+  @PostMapping("/segmentos/{id}/excluir")
+  public String deleteSegment(@PathVariable Long id,
+                              @RequestParam(name = "tab", defaultValue = "segments") String tab,
+                              @RequestParam(name = "buyerPage", defaultValue = "0") int buyerPage,
+                              @RequestParam(name = "supplierPage", defaultValue = "0") int supplierPage,
+                              @RequestParam(name = "segmentPage", defaultValue = "0") int segmentPage,
+                              RedirectAttributes redirectAttributes) {
+    try {
+      segments.deleteById(id);
+      redirectAttributes.addFlashAttribute("successMessage", "Segmento excluído com sucesso.");
+    } catch (DataIntegrityViolationException e) {
+      redirectAttributes.addFlashAttribute("errorMessage", "Não foi possível excluir o segmento: existem visitas associadas.");
+    }
+    return redirectToCatalog(tab, buyerPage, supplierPage, segmentPage);
+  }
+
+  @PostMapping("/compradores/importar")
+  public String importBuyers(@RequestParam("file") MultipartFile file,
+                             @RequestParam(name = "tab", defaultValue = "buyers") String tab,
+                             @RequestParam(name = "buyerPage", defaultValue = "0") int buyerPage,
+                             @RequestParam(name = "supplierPage", defaultValue = "0") int supplierPage,
+                             @RequestParam(name = "segmentPage", defaultValue = "0") int segmentPage,
+                             RedirectAttributes redirectAttributes) {
+    return importSimpleList(file, redirectAttributes, buyers::findByNameIgnoreCase, name -> {
+      Buyer buyer = new Buyer();
+      buyer.setName(name);
+      buyers.save(buyer);
+    }, "compradores", tab, buyerPage, supplierPage, segmentPage);
+  }
+
+  @PostMapping("/fornecedores/importar")
+  public String importSuppliers(@RequestParam("file") MultipartFile file,
+                                @RequestParam(name = "tab", defaultValue = "suppliers") String tab,
+                                @RequestParam(name = "buyerPage", defaultValue = "0") int buyerPage,
+                                @RequestParam(name = "supplierPage", defaultValue = "0") int supplierPage,
+                                @RequestParam(name = "segmentPage", defaultValue = "0") int segmentPage,
+                                RedirectAttributes redirectAttributes) {
+    return importSimpleList(file, redirectAttributes, suppliers::findByNameIgnoreCase, name -> {
+      Supplier supplier = new Supplier();
+      supplier.setName(name);
+      suppliers.save(supplier);
+    }, "fornecedores", tab, buyerPage, supplierPage, segmentPage);
+  }
+
+  @PostMapping("/segmentos/importar")
+  public String importSegments(@RequestParam("file") MultipartFile file,
+                               @RequestParam(name = "tab", defaultValue = "segments") String tab,
+                               @RequestParam(name = "buyerPage", defaultValue = "0") int buyerPage,
+                               @RequestParam(name = "supplierPage", defaultValue = "0") int supplierPage,
+                               @RequestParam(name = "segmentPage", defaultValue = "0") int segmentPage,
+                               RedirectAttributes redirectAttributes) {
+    return importSimpleList(file, redirectAttributes, segments::findByNameIgnoreCase, name -> {
+      Segment segment = new Segment();
+      segment.setName(name);
+      segments.save(segment);
+    }, "segmentos", tab, buyerPage, supplierPage, segmentPage);
+  }
+
+  private String importSimpleList(MultipartFile file,
+                                  RedirectAttributes redirectAttributes,
+                                  Function<String, Optional<?>> finder,
+                                  Consumer<String> creator,
+                                  String entityLabel,
+                                  String tab,
+                                  int buyerPage,
+                                  int supplierPage,
+                                  int segmentPage) {
+    int created = 0;
+    List<String> warnings = new ArrayList<>();
+    try {
+      for (String[] row : csvImportService.parse(file)) {
+        if (row.length == 0 || !StringUtils.hasText(row[0]) || row[0].toLowerCase().contains("nome")) {
+          continue;
         }
-
-        buyers.findByNameIgnoreCase(name.trim()).ifPresentOrElse(existing -> {
-            existing.setActive(true);
-            buyers.save(existing);
-        }, () -> {
-            Buyer buyer = new Buyer();
-            buyer.setName(name.trim());
-            buyers.save(buyer);
-        });
-
-        redirectAttributes.addFlashAttribute("successMessage", "Comprador salvo com sucesso.");
-        return redirectToCatalog(tab, buyerPage, supplierPage, segmentPage);
-    }
-
-    @PostMapping("/fornecedores")
-    public String createSupplier(
-            @RequestParam String name,
-            @RequestParam(name = "tab", defaultValue = "suppliers") String tab,
-            @RequestParam(name = "buyerPage", defaultValue = "0") int buyerPage,
-            @RequestParam(name = "supplierPage", defaultValue = "0") int supplierPage,
-            @RequestParam(name = "segmentPage", defaultValue = "0") int segmentPage,
-            RedirectAttributes redirectAttributes
-    ) {
-        if (!StringUtils.hasText(name)) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Informe um nome para o fornecedor.");
-            return redirectToCatalog(tab, buyerPage, supplierPage, segmentPage);
+        String name = row[0].trim();
+        if (finder.apply(name).isPresent()) {
+          warnings.add("Já existia: " + name);
+        } else {
+          creator.accept(name);
+          created++;
         }
-
-        suppliers.findByNameIgnoreCase(name.trim()).ifPresentOrElse(existing -> {
-            existing.setActive(true);
-            suppliers.save(existing);
-        }, () -> {
-            Supplier supplier = new Supplier();
-            supplier.setName(name.trim());
-            suppliers.save(supplier);
-        });
-
-        redirectAttributes.addFlashAttribute("successMessage", "Fornecedor salvo com sucesso.");
-        return redirectToCatalog(tab, buyerPage, supplierPage, segmentPage);
+      }
+    } catch (IOException e) {
+      redirectAttributes.addFlashAttribute("errorMessage", "Erro ao importar " + entityLabel + ": " + e.getMessage());
+      return redirectToCatalog(tab, buyerPage, supplierPage, segmentPage);
     }
 
-    @PostMapping("/segmentos")
-    public String createSegment(
-            @RequestParam String name,
-            @RequestParam(name = "tab", defaultValue = "segments") String tab,
-            @RequestParam(name = "buyerPage", defaultValue = "0") int buyerPage,
-            @RequestParam(name = "supplierPage", defaultValue = "0") int supplierPage,
-            @RequestParam(name = "segmentPage", defaultValue = "0") int segmentPage,
-            RedirectAttributes redirectAttributes
-    ) {
-        if (!StringUtils.hasText(name)) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Informe um nome para o segmento.");
-            return redirectToCatalog(tab, buyerPage, supplierPage, segmentPage);
-        }
-
-        segments.findByNameIgnoreCase(name.trim()).ifPresentOrElse(existing -> {
-            existing.setActive(true);
-            segments.save(existing);
-        }, () -> {
-            Segment segment = new Segment();
-            segment.setName(name.trim());
-            segments.save(segment);
-        });
-
-        redirectAttributes.addFlashAttribute("successMessage", "Segmento salvo com sucesso.");
-        return redirectToCatalog(tab, buyerPage, supplierPage, segmentPage);
+    if (created > 0) {
+      redirectAttributes.addFlashAttribute("successMessage", created + " " + entityLabel + " importado(s).");
     }
-
-    /* -------------------- ALTERAR STATUS -------------------- */
-
-    @PostMapping("/compradores/{id}/status")
-    public String toggleBuyer(
-            @PathVariable Long id,
-            @RequestParam(name = "tab", defaultValue = "buyers") String tab,
-            @RequestParam(name = "buyerPage", defaultValue = "0") int buyerPage,
-            @RequestParam(name = "supplierPage", defaultValue = "0") int supplierPage,
-            @RequestParam(name = "segmentPage", defaultValue = "0") int segmentPage
-    ) {
-        buyers.findById(id).ifPresent(buyer -> {
-            buyer.setActive(!buyer.isActive());
-            buyers.save(buyer);
-        });
-        return redirectToCatalog(tab, buyerPage, supplierPage, segmentPage);
+    if (!warnings.isEmpty()) {
+      redirectAttributes.addFlashAttribute("warningMessages", warnings);
     }
+    return redirectToCatalog(tab, buyerPage, supplierPage, segmentPage);
+  }
 
-    @PostMapping("/fornecedores/{id}/status")
-    public String toggleSupplier(
-            @PathVariable Long id,
-            @RequestParam(name = "tab", defaultValue = "suppliers") String tab,
-            @RequestParam(name = "buyerPage", defaultValue = "0") int buyerPage,
-            @RequestParam(name = "supplierPage", defaultValue = "0") int supplierPage,
-            @RequestParam(name = "segmentPage", defaultValue = "0") int segmentPage
-    ) {
-        suppliers.findById(id).ifPresent(supplier -> {
-            supplier.setActive(!supplier.isActive());
-            suppliers.save(supplier);
-        });
-        return redirectToCatalog(tab, buyerPage, supplierPage, segmentPage);
-    }
+  private int sanitizePage(int page) {
+    return Math.max(page, 0);
+  }
 
-    @PostMapping("/segmentos/{id}/status")
-    public String toggleSegment(
-            @PathVariable Long id,
-            @RequestParam(name = "tab", defaultValue = "segments") String tab,
-            @RequestParam(name = "buyerPage", defaultValue = "0") int buyerPage,
-            @RequestParam(name = "supplierPage", defaultValue = "0") int supplierPage,
-            @RequestParam(name = "segmentPage", defaultValue = "0") int segmentPage
-    ) {
-        segments.findById(id).ifPresent(segment -> {
-            segment.setActive(!segment.isActive());
-            segments.save(segment);
-        });
-        return redirectToCatalog(tab, buyerPage, supplierPage, segmentPage);
-    }
-
-    /* -------------------- IMPORTAÇÃO CSV -------------------- */
-
-    private String importSimpleList(
-            MultipartFile file,
-            RedirectAttributes redirectAttributes,
-            Function<String, Optional<?>> finder,
-            Consumer<String> creator,
-            String entityLabel,
-            String tab,
-            int buyerPage,
-            int supplierPage,
-            int segmentPage
-    ) {
-        int created = 0;
-        List<String> warnings = new ArrayList<>();
-
-        try {
-            for (String[] line : csvImportService.parse(file)) {
-                if (line.length == 0 || !StringUtils.hasText(line[0]) || line[0].toLowerCase().contains("nome")) {
-                    continue;
-                }
-                String name = line[0].trim();
-
-                if (finder.apply(name).isPresent()) {
-                    warnings.add("Já existia: " + name);
-                } else {
-                    creator.accept(name);
-                    created++;
-                }
-            }
-        } catch (IOException e) {
-            redirectAttributes.addFlashAttribute("errorMessage",
-                    "Erro ao importar " + entityLabel + ": " + e.getMessage());
-            return redirectToCatalog(tab, buyerPage, supplierPage, segmentPage);
-        }
-
-        if (created > 0) {
-            redirectAttributes.addFlashAttribute("successMessage", created + " " + entityLabel + "(s) importado(s).");
-        }
-        if (!warnings.isEmpty()) {
-            redirectAttributes.addFlashAttribute("warningMessages", warnings);
-        }
-
-        return redirectToCatalog(tab, buyerPage, supplierPage, segmentPage);
-    }
-
-    /* -------------------- UTILITÁRIOS -------------------- */
-
-    private int sanitizePage(int page) {
-        return Math.max(page, 0);
-    }
-
-    private String redirectToCatalog(String tab, int buyerPage, int supplierPage, int segmentPage) {
-        return "redirect:/admin/catalogos?tab=" + tab
-                + "&buyerPage=" + sanitizePage(buyerPage)
-                + "&supplierPage=" + sanitizePage(supplierPage)
-                + "&segmentPage=" + sanitizePage(segmentPage);
-    }
+  private String redirectToCatalog(String tab, int buyerPage, int supplierPage, int segmentPage) {
+    return "redirect:/admin/catalogos?tab=" + tab
+        + "&buyerPage=" + sanitizePage(buyerPage)
+        + "&supplierPage=" + sanitizePage(supplierPage)
+        + "&segmentPage=" + sanitizePage(segmentPage);
+  }
 }
