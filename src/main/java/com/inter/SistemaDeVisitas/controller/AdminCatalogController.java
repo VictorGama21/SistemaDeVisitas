@@ -48,7 +48,7 @@ public class AdminCatalogController {
   public String index(Model model,
                       @RequestParam(name = "buyerPage", defaultValue = "0") int buyerPage,
                       @RequestParam(name = "supplierPage", defaultValue = "0") int supplierPage,
-@@ -67,272 +65,352 @@ public class AdminCatalogController {
+  public class AdminCatalogController {
         ? suppliers.findByNameContainingIgnoreCaseOrderByNameAsc(supplierSearch.trim(), supplierPageable)
         : suppliers.findAll(supplierPageable);
 
