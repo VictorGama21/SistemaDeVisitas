@@ -22,8 +22,15 @@ public class JpaUserDetailsService implements UserDetailsService {
         User u = repo.findByEmail(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado: " + username));
 
-        String role = "ROLE_" + u.getRoleGroup().name();
+        RoleGroup group = u.getRoleGroup();
+        if (group == null) {
+            group = RoleGroup.LOJA;
+            u.setRoleGroup(group);
+            repo.save(u);
+        }
 
+        String role = "ROLE_" + group.name();
+        
         return new org.springframework.security.core.userdetails.User(
                 u.getEmail(),
                 u.getPassword(),
