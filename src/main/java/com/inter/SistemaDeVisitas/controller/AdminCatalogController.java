@@ -1,3 +1,5 @@
+package com.inter.SistemaDeVisitas.controller;
+
 import com.inter.SistemaDeVisitas.entity.Buyer;
 import com.inter.SistemaDeVisitas.entity.Segment;
 import com.inter.SistemaDeVisitas.entity.Supplier;
@@ -21,8 +23,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Consumer;
-import java.util.function.Predicate;
 
 @Controller
 @RequestMapping("/admin/catalogos")
@@ -48,7 +48,7 @@ public class AdminCatalogController {
   public String index(Model model,
                       @RequestParam(name = "buyerPage", defaultValue = "0") int buyerPage,
                       @RequestParam(name = "supplierPage", defaultValue = "0") int supplierPage,
-@@ -67,270 +67,309 @@ public class AdminCatalogController {
+@@ -67,272 +65,352 @@ public class AdminCatalogController {
         ? suppliers.findByNameContainingIgnoreCaseOrderByNameAsc(supplierSearch.trim(), supplierPageable)
         : suppliers.findAll(supplierPageable);
 
@@ -74,9 +74,9 @@ public class AdminCatalogController {
       redirectAttributes.addFlashAttribute("errorMessage", "Informe um nome para o comprador.");
       return redirectToCatalog(redirect);
     }
-    Optional<Buyer> existing = buyers.findByNameIgnoreCase(name.trim());
-    if (existing.isPresent()) {
-      Buyer buyer = existing.get();
+    Optional<Buyer> existingBuyer = buyers.findByNameIgnoreCase(name.trim());
+    if (existingBuyer.isPresent()) {
+      Buyer buyer = existingBuyer.get();
       buyer.setActive(true);
       buyers.save(buyer);
     } else {
@@ -96,9 +96,9 @@ public class AdminCatalogController {
       redirectAttributes.addFlashAttribute("errorMessage", "Informe um nome para o fornecedor.");
       return redirectToCatalog(redirect);
     }
-    Optional<Supplier> existing = suppliers.findByNameIgnoreCase(name.trim());
-    if (existing.isPresent()) {
-      Supplier supplier = existing.get();
+    Optional<Supplier> existingSupplier = suppliers.findByNameIgnoreCase(name.trim());
+    if (existingSupplier.isPresent()) {
+      Supplier supplier = existingSupplier.get();
       supplier.setActive(true);
       suppliers.save(supplier);
     } else {
@@ -118,9 +118,9 @@ public class AdminCatalogController {
       redirectAttributes.addFlashAttribute("errorMessage", "Informe um nome para o segmento.");
       return redirectToCatalog(redirect);
     }
-    Optional<Segment> existing = segments.findByNameIgnoreCase(name.trim());
-    if (existing.isPresent()) {
-      Segment segment = existing.get();
+    Optional<Segment> existingSegment = segments.findByNameIgnoreCase(name.trim());
+    if (existingSegment.isPresent()) {
+      Segment segment = existingSegment.get();
       segment.setActive(true);
       segments.save(segment);
     } else {
@@ -136,9 +136,9 @@ public class AdminCatalogController {
   public String toggleBuyer(@PathVariable Long id,
                             @RequestParam(name = "redirect", required = false) String redirect,
                             RedirectAttributes redirectAttributes) {
-    Optional<Buyer> buyerOpt = buyers.findById(id);
-    if (buyerOpt.isPresent()) {
-      Buyer buyer = buyerOpt.get();
+    Optional<Buyer> buyerOptional = buyers.findById(id);
+    if (buyerOptional.isPresent()) {
+      Buyer buyer = buyerOptional.get();
       buyer.setActive(!buyer.isActive());
       buyers.save(buyer);
       redirectAttributes.addFlashAttribute("successMessage", "Status do comprador atualizado.");
@@ -152,9 +152,9 @@ public class AdminCatalogController {
   public String toggleSupplier(@PathVariable Long id,
                                @RequestParam(name = "redirect", required = false) String redirect,
                                RedirectAttributes redirectAttributes) {
-    Optional<Supplier> supplierOpt = suppliers.findById(id);
-    if (supplierOpt.isPresent()) {
-      Supplier supplier = supplierOpt.get();
+    Optional<Supplier> supplierOptional = suppliers.findById(id);
+    if (supplierOptional.isPresent()) {
+      Supplier supplier = supplierOptional.get();
       supplier.setActive(!supplier.isActive());
       suppliers.save(supplier);
       redirectAttributes.addFlashAttribute("successMessage", "Status do fornecedor atualizado.");
@@ -168,9 +168,9 @@ public class AdminCatalogController {
   public String toggleSegment(@PathVariable Long id,
                               @RequestParam(name = "redirect", required = false) String redirect,
                               RedirectAttributes redirectAttributes) {
-    Optional<Segment> segmentOpt = segments.findById(id);
-    if (segmentOpt.isPresent()) {
-      Segment segment = segmentOpt.get();
+    Optional<Segment> segmentOptional = segments.findById(id);
+    if (segmentOptional.isPresent()) {
+      Segment segment = segmentOptional.get();
       segment.setActive(!segment.isActive());
       segments.save(segment);
       redirectAttributes.addFlashAttribute("successMessage", "Status do segmento atualizado.");
@@ -184,33 +184,66 @@ public class AdminCatalogController {
   public String importBuyers(@RequestParam("file") MultipartFile file,
                              @RequestParam(name = "redirect", required = false) String redirect,
                              RedirectAttributes redirectAttributes) {
-    return importSimpleList(file, redirectAttributes, redirect, name -> buyers.findByNameIgnoreCase(name).isPresent(), name -> {
-      Buyer buyer = new Buyer();
-      buyer.setName(name);
-      buyers.save(buyer);
-    }, "compradores");
+    return importSimpleList(file, redirectAttributes, redirect,
+        new EntityFinder() {
+          @Override
+          public Optional<?> findByName(String value) {
+            return buyers.findByNameIgnoreCase(value);
+          }
+        },
+        new EntityCreator() {
+          @Override
+          public void create(String value) {
+            Buyer buyer = new Buyer();
+            buyer.setName(value);
+            buyers.save(buyer);
+          }
+        },
+        "compradores");
   }
 
   @PostMapping("/fornecedores/importar")
   public String importSuppliers(@RequestParam("file") MultipartFile file,
                                 @RequestParam(name = "redirect", required = false) String redirect,
                                 RedirectAttributes redirectAttributes) {
-    return importSimpleList(file, redirectAttributes, redirect, name -> suppliers.findByNameIgnoreCase(name).isPresent(), name -> {
-      Supplier supplier = new Supplier();
-      supplier.setName(name);
-      suppliers.save(supplier);
-    }, "fornecedores");
+    return importSimpleList(file, redirectAttributes, redirect,
+        new EntityFinder() {
+          @Override
+          public Optional<?> findByName(String value) {
+            return suppliers.findByNameIgnoreCase(value);
+          }
+        },
+        new EntityCreator() {
+          @Override
+          public void create(String value) {
+            Supplier supplier = new Supplier();
+            supplier.setName(value);
+            suppliers.save(supplier);
+          }
+        },
+        "fornecedores");
   }
 
   @PostMapping("/segmentos/importar")
   public String importSegments(@RequestParam("file") MultipartFile file,
                                @RequestParam(name = "redirect", required = false) String redirect,
                                RedirectAttributes redirectAttributes) {
-    return importSimpleList(file, redirectAttributes, redirect, name -> segments.findByNameIgnoreCase(name).isPresent(), name -> {
-      Segment segment = new Segment();
-      segment.setName(name);
-      segments.save(segment);
-    }, "segmentos");
+    return importSimpleList(file, redirectAttributes, redirect,
+        new EntityFinder() {
+          @Override
+          public Optional<?> findByName(String value) {
+            return segments.findByNameIgnoreCase(value);
+          }
+        },
+        new EntityCreator() {
+          @Override
+          public void create(String value) {
+            Segment segment = new Segment();
+            segment.setName(value);
+            segments.save(segment);
+          }
+        },
+        "segmentos");
   }
 
   @PostMapping("/compradores/{id}")
@@ -222,9 +255,9 @@ public class AdminCatalogController {
       redirectAttributes.addFlashAttribute("errorMessage", "Informe um nome válido para o comprador.");
       return redirectToCatalog(redirect);
     }
-    Optional<Buyer> buyerOpt = buyers.findById(id);
-    if (buyerOpt.isPresent()) {
-      Buyer buyer = buyerOpt.get();
+    Optional<Buyer> buyerOptional = buyers.findById(id);
+    if (buyerOptional.isPresent()) {
+      Buyer buyer = buyerOptional.get();
       buyer.setName(name.trim());
       buyers.save(buyer);
       redirectAttributes.addFlashAttribute("successMessage", "Comprador atualizado.");
@@ -243,9 +276,9 @@ public class AdminCatalogController {
       redirectAttributes.addFlashAttribute("errorMessage", "Informe um nome válido para o fornecedor.");
       return redirectToCatalog(redirect);
     }
-    Optional<Supplier> supplierOpt = suppliers.findById(id);
-    if (supplierOpt.isPresent()) {
-      Supplier supplier = supplierOpt.get();
+    Optional<Supplier> supplierOptional = suppliers.findById(id);
+    if (supplierOptional.isPresent()) {
+      Supplier supplier = supplierOptional.get();
       supplier.setName(name.trim());
       suppliers.save(supplier);
       redirectAttributes.addFlashAttribute("successMessage", "Fornecedor atualizado.");
@@ -264,9 +297,9 @@ public class AdminCatalogController {
       redirectAttributes.addFlashAttribute("errorMessage", "Informe um nome válido para o segmento.");
       return redirectToCatalog(redirect);
     }
-    Optional<Segment> segmentOpt = segments.findById(id);
-    if (segmentOpt.isPresent()) {
-      Segment segment = segmentOpt.get();
+    Optional<Segment> segmentOptional = segments.findById(id);
+    if (segmentOptional.isPresent()) {
+      Segment segment = segmentOptional.get();
       segment.setName(name.trim());
       segments.save(segment);
       redirectAttributes.addFlashAttribute("successMessage", "Segmento atualizado.");
@@ -280,9 +313,9 @@ public class AdminCatalogController {
   public String deleteBuyer(@PathVariable Long id,
                             @RequestParam(name = "redirect", required = false) String redirect,
                             RedirectAttributes redirectAttributes) {
-    Optional<Buyer> buyerOpt = buyers.findById(id);
-    if (buyerOpt.isPresent()) {
-      buyers.delete(buyerOpt.get());
+    Optional<Buyer> buyerOptional = buyers.findById(id);
+    if (buyerOptional.isPresent()) {
+      buyers.delete(buyerOptional.get());
       redirectAttributes.addFlashAttribute("successMessage", "Comprador removido.");
     } else {
       redirectAttributes.addFlashAttribute("errorMessage", "Comprador não encontrado.");
@@ -294,9 +327,9 @@ public class AdminCatalogController {
   public String deleteSupplier(@PathVariable Long id,
                                @RequestParam(name = "redirect", required = false) String redirect,
                                RedirectAttributes redirectAttributes) {
-    Optional<Supplier> supplierOpt = suppliers.findById(id);
-    if (supplierOpt.isPresent()) {
-      suppliers.delete(supplierOpt.get());
+    Optional<Supplier> supplierOptional = suppliers.findById(id);
+    if (supplierOptional.isPresent()) {
+      suppliers.delete(supplierOptional.get());
       redirectAttributes.addFlashAttribute("successMessage", "Fornecedor removido.");
     } else {
       redirectAttributes.addFlashAttribute("errorMessage", "Fornecedor não encontrado.");
@@ -308,9 +341,9 @@ public class AdminCatalogController {
   public String deleteSegment(@PathVariable Long id,
                               @RequestParam(name = "redirect", required = false) String redirect,
                               RedirectAttributes redirectAttributes) {
-    Optional<Segment> segmentOpt = segments.findById(id);
-    if (segmentOpt.isPresent()) {
-      segments.delete(segmentOpt.get());
+    Optional<Segment> segmentOptional = segments.findById(id);
+    if (segmentOptional.isPresent()) {
+      segments.delete(segmentOptional.get());
       redirectAttributes.addFlashAttribute("successMessage", "Segmento removido.");
     } else {
       redirectAttributes.addFlashAttribute("errorMessage", "Segmento não encontrado.");
@@ -321,8 +354,8 @@ public class AdminCatalogController {
   private String importSimpleList(MultipartFile file,
                                   RedirectAttributes redirectAttributes,
                                   String redirect,
-                                  Predicate<String> exists,
-                                  Consumer<String> creator,
+                                  EntityFinder finder,
+                                  EntityCreator creator,
                                   String entityLabel) {
     int created = 0;
     List<String> warnings = new ArrayList<>();
@@ -332,10 +365,10 @@ public class AdminCatalogController {
           continue;
         }
         String name = row[0].trim();
-        if (exists.test(name)) {
+        if (finder.findByName(name).isPresent()) {
           warnings.add("Já existia: " + name);
         } else {
-          creator.accept(name);
+          creator.create(name);
           created++;
         }
       }
@@ -358,3 +391,13 @@ public class AdminCatalogController {
       return "redirect:/admin/catalogos";
     }
     return "redirect:/admin/catalogos?" + redirect;
+  }
+
+  private interface EntityFinder {
+    Optional<?> findByName(String name);
+  }
+
+  private interface EntityCreator {
+    void create(String name);
+  }
+}
