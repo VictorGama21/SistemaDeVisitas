@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import java.util.Optional;
+
 
 import java.time.LocalDate;
 import java.util.List;
@@ -15,6 +17,8 @@ public interface VisitRepository extends JpaRepository<Visit, Long> {
   @EntityGraph(attributePaths = {"stores", "buyer", "supplier", "segment"})
   @Query("select distinct v from Visit v join v.stores s where s = :store order by v.scheduledDate desc")
   List<Visit> findByStoreOrderByScheduledDateDesc(@Param("store") Store store);
+  @EntityGraph(attributePaths = {"stores", "buyer", "supplier", "segment"})
+  Optional<Visit> findDetailedById(Long id);
 
   long countByStatus(VisitStatus status);
 
