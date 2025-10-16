@@ -165,7 +165,7 @@ public class AdminVisitController {
     public String editForm(@PathVariable Long id,
                            @RequestParam(name = "redirect", required = false) String redirect,
                            Model model) {
-        Visit visit = visits.findById(id)
+        Visit visit = visits.findDetailedById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         model.addAttribute("visit", visit);
         model.addAttribute("stores", stores.findAllByOrderByNameAsc());
@@ -193,7 +193,7 @@ public class AdminVisitController {
                          @RequestParam(name = "rating", required = false) String ratingInput,
                          @RequestParam(name = "redirect", required = false) String redirect,
                          RedirectAttributes redirectAttributes) {
-        Visit visit = visits.findById(id)
+        Visit visit = visits.findDetailedById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
         if (storeIds == null || storeIds.isEmpty()) {
