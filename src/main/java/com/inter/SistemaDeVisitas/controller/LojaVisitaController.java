@@ -243,6 +243,7 @@ public class LojaVisitaController {
       // Admins/Supers podem atualizar qualquer visita, mas se estiverem associados a uma loja diferente,
       // retornamos 404 para evitar alterações acidentais fora do contexto esperado na tela da loja.
       throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+    }
     visit.setStatus(status);
 
     boolean commentProvided = request.getParameterMap().containsKey("comment");
