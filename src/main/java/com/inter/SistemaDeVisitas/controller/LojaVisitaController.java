@@ -227,10 +227,8 @@ public class LojaVisitaController {
                                 RedirectAttributes redirectAttributes) {
     User current = users.findByEmail(authentication.getName()).orElseThrow();
     Store store = current.getStore();
-    Visit visit = visits.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-    RoleGroup roleGroup = current.getRoleGroup();
+    Visit visit = visits.findDetailedById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));    RoleGroup roleGroup = current.getRoleGroup();
     boolean isAdminOrSuper = roleGroup == RoleGroup.ADMIN || roleGroup == RoleGroup.SUPER;
-
     if (!isAdminOrSuper) {
       if (store == null) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND);
