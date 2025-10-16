@@ -233,8 +233,9 @@ public class LojaVisitaController {
 
     if (!isAdminOrSuper) {
       if (store == null) {
-        throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-      }
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+    }
+
       if (!visitBelongsToStore(visit, store)) {
         throw new ResponseStatusException(HttpStatus.FORBIDDEN);
       }
