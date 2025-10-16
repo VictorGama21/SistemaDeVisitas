@@ -45,6 +45,28 @@ public interface VisitRepository extends JpaRepository<Visit, Long> {
   List<Visit> findTop20ByScheduledDateGreaterThanEqualOrderByScheduledDateAsc(LocalDate start);
 
   boolean existsByIdAndStoresContains(Long id, Store store);
+  @EntityGraph(attributePaths = {"stores", "buyer", "supplier", "segment"})
+  @Query("select distinct v from Visit v join v.stores s where s = :store and v.scheduledDate = :date order by v.createdAt asc")
+  List<Visit> findByStoreAndScheduledDate(@Param("store") Store store,
+                                          @Param("date") LocalDate date);
+
+  @Query("select count(distinct v) from Visit v join v.stores s where s = :store and v.status = :status and v.scheduledDate < :before")
+  long countByStoreAndStatusBefore(@Param("store") Store store,
+                                   @Param("status") VisitStatus status,
+                                   @Param("before") LocalDate before);
+
+  @EntityGraph(attributePaths = {"stores", "buyer", "supplier", "segment"})
+  @Query("""
+      select distinct v from Visit v
+      left join v.stores s
+      where (:store is null or s = :store)
+        and (:start is null or v.scheduledDate >= :start)
+        and (:end is null or v.scheduledDate <= :end)
+      order by v.scheduledDate desc
+      """)
+  List<Visit> findByStoreAndDateRange(@Param("store") Store store,
+                                      @Param("start") LocalDate start,
+                                      @Param("end") LocalDate end);
 
   @Query("""
       select v.status as status, count(distinct v) as total
