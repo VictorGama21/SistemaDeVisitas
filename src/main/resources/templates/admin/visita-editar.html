@@ -1,0 +1,115 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+  <th:block th:replace="~{fragments/layout :: layout(~{::content})}">
+    <th:block th:fragment="content">
+      <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-3">
+        <div>
+          <h4 class="mb-0">Editar visita</h4>
+          <p class="text-muted mb-0">Atualize as informações da visita selecionada.</p>
+        </div>
+        <a class="btn btn-outline-secondary btn-sm"
+           th:href="${redirectQuery != null && !#strings.isEmpty(redirectQuery)} ? '/admin/visitas?' + redirectQuery : '/admin/visitas'">
+          Voltar para a lista
+        </a>
+      </div>
+
+      <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
+      <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
+
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <form th:action="@{'/admin/visitas/' + ${visit.id} + '/editar'}" method="post" class="row g-3">
+            <div class="col-12">
+              <label class="form-label">Lojas</label>
+              <select class="form-select" name="storeIds" multiple required>
+                <option th:each="store : ${stores}"
+                        th:value="${store.id}"
+                        th:selected="${visit.stores.contains(store)}"
+                        th:text="${store.name}"></option>
+              </select>
+              <div class="form-text">Use Ctrl + clique para selecionar mais de uma loja.</div>
+            </div>
+
+            <div class="col-sm-4 col-lg-3">
+              <label class="form-label">Data da visita</label>
+              <input type="date" class="form-control" name="scheduledDate"
+                     th:value="${visit.scheduledDate}" required>
+            </div>
+
+            <div class="col-sm-4 col-lg-3">
+              <label class="form-label">Status</label>
+              <select class="form-select" name="status">
+                <option th:each="option : ${statusOptions}"
+                        th:value="${option.name()}"
+                        th:selected="${option == visit.status}"
+                        th:text="${option == T(com.inter.SistemaDeVisitas.entity.VisitStatus).COMPLETED ? 'Concluída' :
+                                   (option == T(com.inter.SistemaDeVisitas.entity.VisitStatus).PENDING ? 'Pendente' :
+                                   (option == T(com.inter.SistemaDeVisitas.entity.VisitStatus).NO_SHOW ? 'Não realizada' : 'Reaberta'))}"></option>
+              </select>
+            </div>
+
+            <div class="col-sm-4 col-lg-3">
+              <label class="form-label">Modalidade</label>
+              <select class="form-select" name="modality">
+                <option th:each="modality : ${modalities}"
+                        th:value="${modality.name()}"
+                        th:selected="${modality == visit.modality}"
+                        th:text="${modality.label}"></option>
+              </select>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">Comprador</label>
+              <input class="form-control" name="buyerName" list="buyerOptions" th:value="${visit.buyer != null ? visit.buyer.name : ''}">
+              <datalist id="buyerOptions">
+                <option th:each="buyer : ${buyers}" th:value="${buyer.name}"></option>
+              </datalist>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">Fornecedor</label>
+              <input class="form-control" name="supplierName" list="supplierOptions" th:value="${visit.supplier != null ? visit.supplier.name : ''}">
+              <datalist id="supplierOptions">
+                <option th:each="supplier : ${suppliers}" th:value="${supplier.name}"></option>
+              </datalist>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">Segmento</label>
+              <input class="form-control" name="segmentName" list="segmentOptions" th:value="${visit.segment != null ? visit.segment.name : ''}">
+              <datalist id="segmentOptions">
+                <option th:each="segment : ${segments}" th:value="${segment.name}"></option>
+              </datalist>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Informações comerciais</label>
+              <textarea class="form-control" name="commercialInfo" rows="3" th:text="${visit.commercialInfo}"></textarea>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Observações internas</label>
+              <textarea class="form-control" name="comment" rows="3" th:text="${visit.comment}"></textarea>
+            </div>
+
+            <div class="col-sm-4 col-lg-2">
+              <label class="form-label">Nota (1 a 5)</label>
+              <input type="number" min="1" max="5" class="form-control" name="rating" th:value="${visit.rating}">
+            </div>
+
+            <div class="col-12 d-flex justify-content-end gap-2">
+              <input type="hidden" name="redirect" th:value="${redirectQuery}">
+              <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+              <a class="btn btn-outline-secondary"
+                 th:href="${redirectQuery != null && !#strings.isEmpty(redirectQuery)} ? '/admin/visitas?' + redirectQuery : '/admin/visitas'">
+                Cancelar
+              </a>
+              <button type="submit" class="btn btn-success">Salvar alterações</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </th:block>
+  </th:block>
+</html>
