@@ -3,7 +3,9 @@ package com.inter.SistemaDeVisitas.controller;
 import com.inter.SistemaDeVisitas.entity.*;
 import com.inter.SistemaDeVisitas.repo.*;
 import com.inter.SistemaDeVisitas.service.CsvImportService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -12,9 +14,12 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.util.UriUtils;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.nio.charset.StandardCharsets;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
@@ -53,18 +58,33 @@ public class AdminVisitController {
 
     @GetMapping
     public String list(@RequestParam(name = "storeId", required = false) Long storeId,
-                       Model model) {
+                       @RequestParam(name = "inicio", required = false)
+                       @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+                       @RequestParam(name = "fim", required = false)
+                       @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+                       Model model,
+                       HttpServletRequest request) {
         List<Store> storeList = stores.findAllByOrderByNameAsc();
         List<Store> activeStores = stores.findByActiveTrueOrderByNameAsc();
-        List<Visit> visitList;
         Store selectedStore = null;
 
         if (storeId != null) {
             selectedStore = stores.findById(storeId).orElse(null);
         }
 
-        if (selectedStore != null) {
-            visitList = visits.findByStoreOrderByScheduledDateDesc(selectedStore);
+        LocalDate normalizedStart = startDate;
+        LocalDate normalizedEnd = endDate;
+        if (normalizedStart != null && normalizedEnd != null && normalizedEnd.isBefore(normalizedStart)) {
+            LocalDate swap = normalizedStart;
+            normalizedStart = normalizedEnd;
+            normalizedEnd = swap;
+        }
+
+        boolean hasDateFilter = normalizedStart != null || normalizedEnd != null;
+        boolean hasStoreFilter = selectedStore != null;
+        List<Visit> visitList;
+        if (hasStoreFilter || hasDateFilter) {
+            visitList = visits.findByStoreAndDateRange(selectedStore, normalizedStart, normalizedEnd);
         } else {
             visitList = visits.findTop10ByOrderByScheduledDateDesc();
         }
@@ -73,10 +93,14 @@ public class AdminVisitController {
         model.addAttribute("availableStores", activeStores);
         model.addAttribute("visits", visitList);
         model.addAttribute("selectedStore", selectedStore);
+        model.addAttribute("startDate", normalizedStart);
+        model.addAttribute("endDate", normalizedEnd);
         model.addAttribute("buyers", buyers.findByActiveTrueOrderByNameAsc());
         model.addAttribute("suppliers", suppliers.findByActiveTrueOrderByNameAsc());
         model.addAttribute("segments", segments.findByActiveTrueOrderByNameAsc());
         model.addAttribute("modalities", VisitModality.values());
+        model.addAttribute("statusOptions", VisitStatus.values());
+        model.addAttribute("currentQuery", request.getQueryString() == null ? "" : request.getQueryString());
         return "admin/visitas";
     }
 
@@ -137,7 +161,109 @@ public class AdminVisitController {
             "Visita agendada para " + scheduledDate.format(IMPORT_DATE_FORMAT) + " em " + selectedStores.size() + " loja(s).");
         return "redirect:/admin/visitas";
     }
+        @GetMapping("/{id}/editar")
+    public String editForm(@PathVariable Long id,
+                           @RequestParam(name = "redirect", required = false) String redirect,
+                           Model model) {
+        Visit visit = visits.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        model.addAttribute("visit", visit);
+        model.addAttribute("stores", stores.findAllByOrderByNameAsc());
+        model.addAttribute("availableStores", stores.findByActiveTrueOrderByNameAsc());
+        model.addAttribute("buyers", buyers.findByActiveTrueOrderByNameAsc());
+        model.addAttribute("suppliers", suppliers.findByActiveTrueOrderByNameAsc());
+        model.addAttribute("segments", segments.findByActiveTrueOrderByNameAsc());
+        model.addAttribute("modalities", VisitModality.values());
+        model.addAttribute("statusOptions", VisitStatus.values());
+        model.addAttribute("redirectQuery", redirect);
+        return "admin/visita-editar";
+    }
 
+    @PostMapping("/{id}/editar")
+    public String update(@PathVariable Long id,
+                         @RequestParam(value = "storeIds", required = false) List<Long> storeIds,
+                         @RequestParam("scheduledDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate scheduledDate,
+                         @RequestParam("status") VisitStatus status,
+                         @RequestParam("modality") String modality,
+                         @RequestParam(required = false) String buyerName,
+                         @RequestParam(required = false) String supplierName,
+                         @RequestParam(required = false) String segmentName,
+                         @RequestParam(required = false) String commercialInfo,
+                         @RequestParam(required = false) String comment,
+                         @RequestParam(name = "rating", required = false) String ratingInput,
+                         @RequestParam(name = "redirect", required = false) String redirect,
+                         RedirectAttributes redirectAttributes) {
+        Visit visit = visits.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        if (storeIds == null || storeIds.isEmpty()) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Selecione ao menos uma loja.");
+            return buildEditRedirect(id, redirect);
+        }
+        List<Store> selectedStores = stores.findAllById(storeIds);
+        if (selectedStores.isEmpty()) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Nenhuma loja válida foi encontrada.");
+            return buildEditRedirect(id, redirect);
+        }
+        visit.setStores(new LinkedHashSet<>(selectedStores));
+
+        visit.setScheduledDate(scheduledDate);
+        visit.setStatus(status);
+        visit.setModality(VisitModality.fromString(modality));
+
+        Buyer buyer = resolveBuyer(buyerName, redirectAttributes);
+        if (StringUtils.hasText(buyerName) && buyer == null) {
+            return buildEditRedirect(id, redirect);
+        }
+        visit.setBuyer(buyer);
+
+        Supplier supplier = resolveSupplier(supplierName, redirectAttributes);
+        if (StringUtils.hasText(supplierName) && supplier == null) {
+            return buildEditRedirect(id, redirect);
+        }
+        visit.setSupplier(supplier);
+
+        Segment segment = resolveSegment(segmentName, redirectAttributes);
+        if (StringUtils.hasText(segmentName) && segment == null) {
+            return buildEditRedirect(id, redirect);
+        }
+        visit.setSegment(segment);
+
+        visit.setCommercialInfo(StringUtils.hasText(commercialInfo) ? commercialInfo.trim() : null);
+        visit.setComment(StringUtils.hasText(comment) ? comment.trim() : null);
+
+        Integer rating = null;
+        if (StringUtils.hasText(ratingInput)) {
+            try {
+                rating = Integer.parseInt(ratingInput.trim());
+            } catch (NumberFormatException ex) {
+                redirectAttributes.addFlashAttribute("errorMessage", "Informe uma nota numérica entre 1 e 5.");
+                return buildEditRedirect(id, redirect);
+            }
+            if (rating < 1 || rating > 5) {
+                redirectAttributes.addFlashAttribute("errorMessage", "A nota deve estar entre 1 e 5.");
+                return buildEditRedirect(id, redirect);
+            }
+        }
+        visit.setRating(rating);
+
+        visits.save(visit);
+        redirectAttributes.addFlashAttribute("successMessage", "Visita atualizada com sucesso.");
+        return redirectToList(redirect);
+    }
+
+    @PostMapping("/{id}/excluir")
+    public String delete(@PathVariable Long id,
+                         @RequestParam(name = "redirect", required = false) String redirect,
+                         RedirectAttributes redirectAttributes) {
+        if (!visits.existsById(id)) {
+            redirectAttributes.addFlashAttribute("errorMessage", "A visita informada não foi encontrada.");
+            return redirectToList(redirect);
+        }
+        visits.deleteById(id);
+        redirectAttributes.addFlashAttribute("successMessage", "Visita excluída com sucesso.");
+        return redirectToList(redirect);
+    }
     @PostMapping("/importar")
     public String importVisits(@RequestParam("file") MultipartFile file,
                                Authentication authentication,
@@ -182,6 +308,26 @@ public class AdminVisitController {
         }
         return "redirect:/admin/visitas";
     }
+        private String redirectToList(String redirect) {
+        return "redirect:/admin/visitas" + buildRedirectSuffix(redirect);
+    }
+
+    private String buildRedirectSuffix(String redirect) {
+        if (!StringUtils.hasText(redirect)) {
+            return "";
+        }
+        return "?" + redirect;
+    }
+
+    private String buildEditRedirect(Long id, String redirect) {
+        String base = "redirect:/admin/visitas/" + id + "/editar";
+        if (!StringUtils.hasText(redirect)) {
+            return base;
+        }
+        String encoded = UriUtils.encode(redirect, StandardCharsets.UTF_8);
+        return base + "?redirect=" + encoded;
+    }
+
 
     private boolean isHeader(String[] columns) {
         String first = columns[0].toLowerCase(Locale.ROOT);
