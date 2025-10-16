@@ -227,15 +227,21 @@ public class LojaVisitaController {
                                 RedirectAttributes redirectAttributes) {
     User current = users.findByEmail(authentication.getName()).orElseThrow();
     Store store = current.getStore();
-    if (store == null || !visits.existsByIdAndStoresContains(id, store)) {
-      throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-    }
-
     Visit visit = visits.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-    if (!visit.getStores().contains(store)) {
-      throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-    }
+    RoleGroup roleGroup = current.getRoleGroup();
+    boolean isAdminOrSuper = roleGroup == RoleGroup.ADMIN || roleGroup == RoleGroup.SUPER;
 
+    if (!isAdminOrSuper) {
+      if (store == null) {
+        throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+      }
+      if (!visitBelongsToStore(visit, store)) {
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+      }
+    } else if (store != null && !visitBelongsToStore(visit, store)) {
+      // Admins/Supers podem atualizar qualquer visita, mas se estiverem associados a uma loja diferente,
+      // retornamos 404 para evitar alterações acidentais fora do contexto esperado na tela da loja.
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND);
     visit.setStatus(status);
 
     boolean commentProvided = request.getParameterMap().containsKey("comment");
@@ -265,7 +271,15 @@ public class LojaVisitaController {
     redirectAttributes.addFlashAttribute("successMessage", "Visita atualizada com sucesso.");
     return resolveRedirect(target, redirect);
   }
-
+  private boolean visitBelongsToStore(Visit visit, Store store) {
+    if (visit.getStores() == null || store == null) {
+      return false;
+    }
+    return visit.getStores().stream()
+        .map(Store::getId)
+        .filter(Objects::nonNull)
+        .anyMatch(id -> id.equals(store.getId()));
+  }
   private static Set<VisitStatus> parseStatusFilters(List<String> rawStatuses) {
     if (rawStatuses == null || rawStatuses.isEmpty()) {
       return Collections.emptySet();
