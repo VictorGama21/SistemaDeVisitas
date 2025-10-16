@@ -81,7 +81,14 @@
             </div>
           </div>
         </div>
-
+        <div class="alert alert-warning" role="alert" th:if="${hasOverduePending}">
+          <strong>Atenção:</strong>
+          Você possui
+          <strong th:text="${overduePendingCount}">0</strong>
+          visita(s) pendente(s) com data anterior a
+          <strong th:text="${#temporals.format(today, 'dd/MM/yyyy')}">10/06/2024</strong>.
+          Atualize os status para manter o acompanhamento em dia.
+        </div>
         <div class="card shadow-sm mb-4">
           <div class="card-body">
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3 mb-3">
