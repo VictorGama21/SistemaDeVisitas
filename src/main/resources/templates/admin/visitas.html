@@ -102,8 +102,8 @@
 
           <div class="card shadow-sm">
             <div class="card-body">
-              <form method="get" class="row g-2 align-items-end mb-3">
-                <div class="col-sm-8">
+              <form method="get" class="row g-3 align-items-end mb-3">
+                <div class="col-12 col-md-5">
                   <label for="filterStore" class="form-label">Filtrar por loja</label>
                   <select id="filterStore" name="storeId" class="form-select">
                     <option value="">Todas as lojas</option>
@@ -113,8 +113,19 @@
                             th:text="${store.name}"></option>
                   </select>
                 </div>
-                <div class="col-sm-4 text-sm-end">
+                <div class="col-6 col-md-3">
+                  <label class="form-label" for="filterStart">Data inicial</label>
+                  <input id="filterStart" type="date" class="form-control" name="inicio" th:value="${startDate}">
+                </div>
+                <div class="col-6 col-md-3">
+                  <label class="form-label" for="filterEnd">Data final</label>
+                  <input id="filterEnd" type="date" class="form-control" name="fim" th:value="${endDate}">
+                </div>
+                <div class="col-12 col-md-1 text-md-end">
                   <button class="btn btn-outline-success w-100" type="submit">Filtrar</button>
+                </div>
+                <div class="col-12">
+                  <a class="btn btn-link btn-sm p-0" th:href="@{/admin/visitas}">Limpar filtros</a>
                 </div>
               </form>
 
@@ -128,8 +139,10 @@
                       <th>Comprador</th>
                       <th>Fornecedor</th>
                       <th>Segmento</th>
+                      <th>Status</th>
                       <th>Informações comerciais</th>
                       <th>Observações</th>
+                      <th class="text-end">Ações</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -142,11 +155,32 @@
                       <td th:text="${visit.buyer != null ? visit.buyer.name : '-'}">-</td>
                       <td th:text="${visit.supplier != null ? visit.supplier.name : '-'}">-</td>
                       <td th:text="${visit.segment != null ? visit.segment.name : '-'}">-</td>
+                      <td>
+                        <span class="badge"
+                              th:classappend="${visit.status == T(com.inter.SistemaDeVisitas.entity.VisitStatus).COMPLETED} ? ' text-bg-success' :
+                                              (visit.status == T(com.inter.SistemaDeVisitas.entity.VisitStatus).PENDING ? ' text-bg-warning' :
+                                              (visit.status == T(com.inter.SistemaDeVisitas.entity.VisitStatus).NO_SHOW ? ' text-bg-danger' : ' text-bg-info'))"
+                              th:text="${visit.status == T(com.inter.SistemaDeVisitas.entity.VisitStatus).COMPLETED} ? 'Concluída' :
+                                        (visit.status == T(com.inter.SistemaDeVisitas.entity.VisitStatus).PENDING ? 'Pendente' :
+                                        (visit.status == T(com.inter.SistemaDeVisitas.entity.VisitStatus).NO_SHOW ? 'Não realizada' : 'Reaberta'))}">Pendente</span>
+                      </td>
                       <td th:text="${visit.commercialInfo} ?: '-'">-</td>
                       <td th:text="${visit.comment} ?: '-'">-</td>
+                      <td class="text-end">
+                        <div class="d-flex flex-wrap justify-content-end gap-2">
+                          <a class="btn btn-outline-primary btn-sm"
+                             th:href="@{'/admin/visitas/' + ${visit.id} + '/editar'(redirect=${currentQuery})}">Editar</a>
+                          <form th:action="@{'/admin/visitas/' + ${visit.id} + '/excluir'}" method="post" class="d-inline">
+                            <input type="hidden" name="redirect" th:value="${currentQuery}">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                            <button type="submit" class="btn btn-outline-danger btn-sm"
+                                    onclick="return confirm('Deseja realmente excluir esta visita?');">Excluir</button>
+                          </form>
+                        </div>
+                      </td>
                     </tr>
                     <tr th:if="${#lists.isEmpty(visits)}">
-                      <td colspan="8" class="text-center text-muted py-4">Nenhuma visita encontrada.</td>
+                    <td colspan="10" class="text-center text-muted py-4">Nenhuma visita encontrada.</td>
                     </tr>
                   </tbody>
                 </table>
