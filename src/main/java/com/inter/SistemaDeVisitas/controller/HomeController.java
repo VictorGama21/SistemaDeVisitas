@@ -174,8 +174,14 @@ public class HomeController {
         List<Visit> weeklyVisits = visitRepository.findByStoreAndScheduledDateBetween(store, weekStart, weekEnd);
         visitasHoje = visitRepository.countByStoreAndScheduledDateBetween(store, today, today);
         clientesAtivos = userRepository.countByStoreAndEnabledTrue(store);
+        List<Visit> todayVisits = visitRepository.findByStoreAndScheduledDate(store, today);
+        long overduePendingCount = visitRepository.countByStoreAndStatusBefore(store, VisitStatus.PENDING, today);
         model.addAttribute("activeStore", store);
         model.addAttribute("storeVisits", weeklyVisits);
+        model.addAttribute("todayVisits", todayVisits);
+        model.addAttribute("today", today);
+        model.addAttribute("hasOverduePending", overduePendingCount > 0);
+        model.addAttribute("overduePendingCount", overduePendingCount);
         model.addAttribute("weekStart", weekStart);
         model.addAttribute("weekEnd", weekEnd);
         model.addAttribute("weekOffset", weekOffset);
@@ -185,6 +191,10 @@ public class HomeController {
         visitasHoje = 0;
         clientesAtivos = 0;
         model.addAttribute("needsStoreAssociation", true);
+        model.addAttribute("todayVisits", Collections.emptyList());
+        model.addAttribute("today", today);
+        model.addAttribute("hasOverduePending", false);
+        model.addAttribute("overduePendingCount", 0L);
       }
       model.addAttribute("availableStores", storeRepository.findByActiveTrueOrderByNameAsc());
       model.addAttribute("showAdminShortcuts", false);
