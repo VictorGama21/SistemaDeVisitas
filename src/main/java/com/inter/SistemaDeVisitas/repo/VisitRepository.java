@@ -44,7 +44,6 @@ public interface VisitRepository extends JpaRepository<Visit, Long> {
   @EntityGraph(attributePaths = {"stores", "buyer", "supplier", "segment"})
   List<Visit> findTop20ByScheduledDateGreaterThanEqualOrderByScheduledDateAsc(LocalDate start);
 
-  boolean existsByIdAndStoresContains(Long id, Store store);
   @EntityGraph(attributePaths = {"stores", "buyer", "supplier", "segment"})
   @Query("select distinct v from Visit v join v.stores s where s = :store and v.scheduledDate = :date order by v.createdAt asc")
   List<Visit> findByStoreAndScheduledDate(@Param("store") Store store,
