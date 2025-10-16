@@ -1,5 +1,6 @@
 package com.inter.SistemaDeVisitas.controller;
 
+import com.inter.SistemaDeVisitas.entity.RoleGroup;
 import com.inter.SistemaDeVisitas.entity.Store;
 import com.inter.SistemaDeVisitas.entity.User;
 import com.inter.SistemaDeVisitas.entity.Visit;
