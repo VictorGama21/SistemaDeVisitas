@@ -115,7 +115,10 @@ public class HomeController {
 
       NavigableMap<LocalDate, Long> dailySummary = new TreeMap<>();
       for (Object[] row : visitRepository.countDailyByStoreBetween(selectedStore, defaultStart, defaultEnd)) {
-        LocalDate date = (LocalDate) row[0];
+        LocalDate date = extractLocalDate(row[0]);
+        if (date == null) {
+          continue;
+        }
         long total = row[1] instanceof Number ? ((Number) row[1]).longValue() : 0L;
         dailySummary.merge(date, total, Long::sum);
       }
@@ -209,10 +212,17 @@ public class HomeController {
     model.addAttribute("currentUser", currentUser);
     model.addAttribute("isAdmin", isAdmin);
     model.addAttribute("isStoreUser", isStoreUser);
-
     return "home";
   }
-
+  private LocalDate extractLocalDate(Object value) {
+    if (value instanceof LocalDate localDate) {
+      return localDate;
+    }
+    if (value instanceof java.sql.Date sqlDate) {
+      return sqlDate.toLocalDate();
+    }
+    return null;
+  }
   private static String labelForStatus(VisitStatus status) {
     return switch (status) {
       case PENDING -> "Pendentes";
