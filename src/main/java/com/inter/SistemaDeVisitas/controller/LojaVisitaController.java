@@ -480,7 +480,7 @@ public class LojaVisitaController {
       }
     }
     return statuses;
-@@ -303,40 +488,165 @@ public class LojaVisitaController {
+public class LojaVisitaController {
       return null;
     }
     String normalized = input.trim().toLowerCase(Locale.ROOT);
