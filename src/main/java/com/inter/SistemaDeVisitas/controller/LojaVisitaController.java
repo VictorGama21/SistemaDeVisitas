@@ -84,10 +84,7 @@ public class LojaVisitaController {
       List<Visit> allStoreVisits = visits.findByStoreOrderByScheduledDateDesc(store);
       List<Visit> storeVisits = new ArrayList<>(allStoreVisits);
 
-      long overduePendingCount = allStoreVisits.stream()
-          .filter(v -> v.getStatus() == VisitStatus.PENDING)
-          .filter(v -> v.getScheduledDate() != null && v.getScheduledDate().isBefore(today))
-          .count();
+      long overduePendingCount = visits.countByStoreAndStatusBefore(store, VisitStatus.PENDING, today);
       boolean hasOverduePending = overduePendingCount > 0;
 
       if (normalizedStart != null) {
@@ -172,6 +169,9 @@ public class LojaVisitaController {
       model.addAttribute("statusChartValues", statusChartValues);
       model.addAttribute("dailyChartLabels", dailyChartLabels);
       model.addAttribute("dailyChartValues", dailyChartValues);
+      model.addAttribute("hasOverduePending", hasOverduePending);
+      model.addAttribute("overduePendingCount", overduePendingCount);
+      model.addAttribute("today", today);
     } else {
       model.addAttribute("visits", Collections.emptyList());
       model.addAttribute("selectedStatuses", Collections.emptySet());
@@ -196,10 +196,9 @@ public class LojaVisitaController {
           .collect(Collectors.toList()));
       model.addAttribute("dailyChartLabels", Collections.emptyList());
       model.addAttribute("dailyChartValues", Collections.emptyList());
-      model.addAttribute("dailyChartValues", Collections.emptyList());
       model.addAttribute("hasOverduePending", false);
       model.addAttribute("overduePendingCount", 0L);
-      model.addAttribute("today", LocalDate.now());      
+      model.addAttribute("today", LocalDate.now());  
     }
     return "loja/visitas";
   }
@@ -221,6 +220,7 @@ public class LojaVisitaController {
                                 @RequestParam(name = "comment", required = false) String comment,
                                 @RequestParam(name = "rating", required = false) String ratingInput,
                                 @RequestParam(name = "redirect", required = false) String redirect,
+                                @RequestParam(name = "target", required = false) String target,
                                 Authentication authentication,
                                 HttpServletRequest request,
                                 RedirectAttributes redirectAttributes) {
@@ -250,11 +250,11 @@ public class LojaVisitaController {
           rating = Integer.parseInt(ratingInput.trim());
         } catch (NumberFormatException ex) {
           redirectAttributes.addFlashAttribute("errorMessage", "Informe uma nota numérica entre 1 e 5.");
-          return "redirect:/loja/visitas" + buildRedirectSuffix(redirect);
+          return resolveRedirect(target, redirect);
         }
         if (rating < 1 || rating > 5) {
           redirectAttributes.addFlashAttribute("errorMessage", "A nota deve estar entre 1 e 5.");
-          return "redirect:/loja/visitas" + buildRedirectSuffix(redirect);
+          return resolveRedirect(target, redirect);
         }
       }
       visit.setRating(rating);
@@ -262,7 +262,7 @@ public class LojaVisitaController {
 
     visits.save(visit);
     redirectAttributes.addFlashAttribute("successMessage", "Visita atualizada com sucesso.");
-    return "redirect:/loja/visitas" + buildRedirectSuffix(redirect);
+    return resolveRedirect(target, redirect);
   }
 
   private static Set<VisitStatus> parseStatusFilters(List<String> rawStatuses) {
@@ -310,7 +310,12 @@ public class LojaVisitaController {
     }
     return "?" + redirect;
   }
-
+    private static String resolveRedirect(String target, String redirect) {
+    if (StringUtils.hasText(target) && "home".equalsIgnoreCase(target.trim())) {
+      return "redirect:/home";
+    }
+    return "redirect:/loja/visitas" + buildRedirectSuffix(redirect);
+  }
   private static String labelForStatus(VisitStatus status) {
     return switch (status) {
       case COMPLETED -> "Concluída";
