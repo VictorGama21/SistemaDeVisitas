@@ -142,6 +142,7 @@
                       <th>Status</th>
                       <th>Informações comerciais</th>
                       <th>Observações</th>
+                      <th>Atualização status</th>
                       <th class="text-end">Ações</th>
                     </tr>
                   </thead>
@@ -156,19 +157,16 @@
                       <td th:text="${visit.supplier != null ? visit.supplier.name : '-'}">-</td>
                       <td th:text="${visit.segment != null ? visit.segment.name : '-'}">-</td>
                       <td>
-                        <span th:if="${visit.status != null}"
-                              class="badge"
-                              th:classappend="${visit.status == T(com.inter.SistemaDeVisitas.entity.VisitStatus).COMPLETED} ? ' text-bg-success' :
-                                              (visit.status == T(com.inter.SistemaDeVisitas.entity.VisitStatus).PENDING ? ' text-bg-warning' :
-                                              (visit.status == T(com.inter.SistemaDeVisitas.entity.VisitStatus).NO_SHOW ? ' text-bg-danger' : ' text-bg-info'))"
-                              th:text="${visit.status == T(com.inter.SistemaDeVisitas.entity.VisitStatus).COMPLETED} ? 'Concluída' :
-                                        (visit.status == T(com.inter.SistemaDeVisitas.entity.VisitStatus).PENDING ? 'Pendente' :
-                                        (visit.status == T(com.inter.SistemaDeVisitas.entity.VisitStatus).NO_SHOW ? 'Não realizada' : 'Reaberta'))}">Pendente</span>
-                        <span th:if="${visit.status == null}"
-                              class="badge text-bg-secondary">Sem status</span>
+                        <span class="badge"
+                              th:classappend="${visit.status != null} ? ' ' + visit.status.badgeClass : ' text-bg-secondary'"
+                              th:text="${visit.status != null ? visit.status.label : 'Sem status'}"></span>
                       </td>
                       <td th:text="${visit.commercialInfo} ?: '-'">-</td>
                       <td th:text="${visit.comment} ?: '-'">-</td>
+                      <td>
+                        <div class="small" th:text="${visit.lastStatusUpdatedAt != null ? #temporals.format(visit.lastStatusUpdatedAt, 'dd/MM/yyyy HH:mm') : '-'}">-</div>
+                        <div class="small text-muted" th:text="${visit.lastStatusUpdatedBy != null ? visit.lastStatusUpdatedBy.name : '-'}">-</div>
+                      </td>
                       <td class="text-end">
                         <div class="d-flex flex-wrap justify-content-end gap-2">
                           <a class="btn btn-outline-primary btn-sm"
@@ -183,7 +181,7 @@
                       </td>
                     </tr>
                     <tr th:if="${#lists.isEmpty(visits)}">
-                    <td colspan="10" class="text-center text-muted py-4">Nenhuma visita encontrada.</td>
+                    <td colspan="11" class="text-center text-muted py-4">Nenhuma visita encontrada.</td>
                     </tr>
                   </tbody>
                 </table>
