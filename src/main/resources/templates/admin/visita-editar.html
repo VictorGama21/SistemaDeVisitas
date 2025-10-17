@@ -43,9 +43,7 @@
                 <option th:each="option : ${statusOptions}"
                         th:value="${option.name()}"
                         th:selected="${option == visit.status}"
-                        th:text="${option == T(com.inter.SistemaDeVisitas.entity.VisitStatus).COMPLETED ? 'Concluída' :
-                                   (option == T(com.inter.SistemaDeVisitas.entity.VisitStatus).PENDING ? 'Pendente' :
-                                   (option == T(com.inter.SistemaDeVisitas.entity.VisitStatus).NO_SHOW ? 'Não realizada' : 'Reaberta'))}"></option>
+                        th:text="${option.label}"></option>
               </select>
             </div>
 
