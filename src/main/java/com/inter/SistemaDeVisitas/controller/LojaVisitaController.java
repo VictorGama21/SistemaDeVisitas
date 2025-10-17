@@ -20,6 +20,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.util.StringUtils;
 
 import java.time.DayOfWeek;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
@@ -125,6 +126,7 @@ public class LojaVisitaController {
       long pendingCount = statusCounts.getOrDefault(VisitStatus.PENDING, 0L);
       long noShowCount = statusCounts.getOrDefault(VisitStatus.NO_SHOW, 0L);
       long reopenedCount = statusCounts.getOrDefault(VisitStatus.REOPENED, 0L);
+      long cancelledCount = statusCounts.getOrDefault(VisitStatus.CANCELLED, 0L);
       long todayCount = storeVisits.stream()
           .filter(v -> v.getScheduledDate() != null && v.getScheduledDate().isEqual(today))
           .count();
@@ -145,7 +147,7 @@ public class LojaVisitaController {
       List<Long> dailyChartValues = new ArrayList<>(visitsPerDay.values());
 
       List<String> statusChartLabels = Arrays.stream(VisitStatus.values())
-          .map(LojaVisitaController::labelForStatus)
+          .map(VisitStatus::getLabel)
           .collect(Collectors.toList());
       List<Long> statusChartValues = Arrays.stream(VisitStatus.values())
           .map(status -> statusCounts.getOrDefault(status, 0L))
@@ -163,6 +165,8 @@ public class LojaVisitaController {
       model.addAttribute("pendingCount", pendingCount);
       model.addAttribute("noShowCount", noShowCount);
       model.addAttribute("reopenedCount", reopenedCount);
+      model.addAttribute("cancelledCount", 0);
+      model.addAttribute("cancelledCount", cancelledCount);
       model.addAttribute("completionRate", completionRate);
       model.addAttribute("todayCount", todayCount);
       model.addAttribute("yesterdayCount", yesterdayCount);
@@ -186,11 +190,12 @@ public class LojaVisitaController {
       model.addAttribute("pendingCount", 0);
       model.addAttribute("noShowCount", 0);
       model.addAttribute("reopenedCount", 0);
+      model.addAttribute("cancelledCount", 0);
       model.addAttribute("completionRate", 0);
       model.addAttribute("todayCount", 0);
       model.addAttribute("yesterdayCount", 0);
       model.addAttribute("statusChartLabels", Arrays.stream(VisitStatus.values())
-          .map(LojaVisitaController::labelForStatus)
+          .map(VisitStatus::getLabel)
           .collect(Collectors.toList()));
       model.addAttribute("statusChartValues", Arrays.stream(VisitStatus.values())
           .map(status -> 0L)
@@ -227,13 +232,12 @@ public class LojaVisitaController {
                                 RedirectAttributes redirectAttributes) {
     User current = users.findByEmail(authentication.getName()).orElseThrow();
     Store store = current.getStore();
-    Visit visit = visits.findDetailedById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));    RoleGroup roleGroup = current.getRoleGroup();
+    Visit visit = visits.findDetailedById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
     boolean isAdminOrSuper = roleGroup == RoleGroup.ADMIN || roleGroup == RoleGroup.SUPER;
     if (!isAdminOrSuper) {
       if (store == null) {
-      throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-    }
-
+        throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+      }
       if (!visitBelongsToStore(visit, store)) {
         throw new ResponseStatusException(HttpStatus.FORBIDDEN);
       }
@@ -242,6 +246,7 @@ public class LojaVisitaController {
       // retornamos 404 para evitar alterações acidentais fora do contexto esperado na tela da loja.
       throw new ResponseStatusException(HttpStatus.NOT_FOUND);
     }
+    VisitStatus previousStatus = visit.getStatus();
     visit.setStatus(status);
 
     boolean commentProvided = request.getParameterMap().containsKey("comment");
@@ -266,6 +271,11 @@ public class LojaVisitaController {
       }
       visit.setRating(rating);
     }
+        if (previousStatus != status) {
+      visit.setLastStatusUpdatedBy(current);
+      visit.setLastStatusUpdatedAt(Instant.now());
+    }
+
 
     visits.save(visit);
     redirectAttributes.addFlashAttribute("successMessage", "Visita atualizada com sucesso.");
@@ -325,18 +335,10 @@ public class LojaVisitaController {
     }
     return "?" + redirect;
   }
-    private static String resolveRedirect(String target, String redirect) {
+  private static String resolveRedirect(String target, String redirect) {
     if (StringUtils.hasText(target) && "home".equalsIgnoreCase(target.trim())) {
       return "redirect:/home";
     }
     return "redirect:/loja/visitas" + buildRedirectSuffix(redirect);
-  }
-  private static String labelForStatus(VisitStatus status) {
-    return switch (status) {
-      case COMPLETED -> "Concluída";
-      case PENDING -> "Pendente";
-      case NO_SHOW -> "Não realizada";
-      case REOPENED -> "Reaberta";
-    };
   }
 }
