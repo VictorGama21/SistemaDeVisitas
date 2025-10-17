@@ -272,7 +272,7 @@ public class LojaVisitaController {
       }
       visit.setRating(rating);
     }
-        if (previousStatus != status) {
+    if (previousStatus != status) {
       visit.setLastStatusUpdatedBy(current);
       visit.setLastStatusUpdatedAt(Instant.now());
     }
