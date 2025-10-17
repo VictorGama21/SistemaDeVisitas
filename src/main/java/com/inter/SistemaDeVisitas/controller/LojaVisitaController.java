@@ -56,6 +56,7 @@ public class LojaVisitaController {
                        HttpServletRequest request) {
     User current = users.findByEmail(authentication.getName()).orElseThrow();
     Store store = current.getStore();
+    RoleGroup roleGroup = Optional.ofNullable(current.getRoleGroup()).orElse(RoleGroup.LOJA);
     model.addAttribute("user", current);
     model.addAttribute("activeStore", store);
     model.addAttribute("stores", stores.findByActiveTrueOrderByNameAsc());
