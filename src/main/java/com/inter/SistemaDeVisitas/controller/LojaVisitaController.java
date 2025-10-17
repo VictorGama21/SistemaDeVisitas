@@ -63,6 +63,7 @@ public class LojaVisitaController {
     model.addAttribute("statusOptions", VisitStatus.values());
     model.addAttribute("dayOptions", buildDayFilterOptions());
     model.addAttribute("currentQuery", request.getQueryString() == null ? "" : request.getQueryString());
+    model.addAttribute("roleGroup", roleGroup);
 
     if (store != null) {
       LocalDate today = LocalDate.now();
@@ -166,7 +167,6 @@ public class LojaVisitaController {
       model.addAttribute("pendingCount", pendingCount);
       model.addAttribute("noShowCount", noShowCount);
       model.addAttribute("reopenedCount", reopenedCount);
-      model.addAttribute("cancelledCount", 0);
       model.addAttribute("cancelledCount", cancelledCount);
       model.addAttribute("completionRate", completionRate);
       model.addAttribute("todayCount", todayCount);
@@ -205,7 +205,7 @@ public class LojaVisitaController {
       model.addAttribute("dailyChartValues", Collections.emptyList());
       model.addAttribute("hasOverduePending", false);
       model.addAttribute("overduePendingCount", 0L);
-      model.addAttribute("today", LocalDate.now());  
+      model.addAttribute("today", LocalDate.now());
     }
     return "loja/visitas";
   }
@@ -233,8 +233,13 @@ public class LojaVisitaController {
                                 RedirectAttributes redirectAttributes) {
     User current = users.findByEmail(authentication.getName()).orElseThrow();
     Store store = current.getStore();
-    Visit visit = visits.findDetailedById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-    boolean isAdminOrSuper = roleGroup == RoleGroup.ADMIN || roleGroup == RoleGroup.SUPER;
+    Visit visit = visits.findDetailedById(id)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+    // pega o grupo do usuário atual (fallback para LOJA se vier nulo)
+    RoleGroup roleGroup = Optional.ofNullable(current.getRoleGroup()).orElse(RoleGroup.LOJA);
+    boolean isAdminOrSuper = (roleGroup == RoleGroup.ADMIN || roleGroup == RoleGroup.SUPER);
+
     if (!isAdminOrSuper) {
       if (store == null) {
         throw new ResponseStatusException(HttpStatus.NOT_FOUND);
@@ -247,6 +252,7 @@ public class LojaVisitaController {
       // retornamos 404 para evitar alterações acidentais fora do contexto esperado na tela da loja.
       throw new ResponseStatusException(HttpStatus.NOT_FOUND);
     }
+
     VisitStatus previousStatus = visit.getStatus();
     visit.setStatus(status);
 
@@ -272,16 +278,17 @@ public class LojaVisitaController {
       }
       visit.setRating(rating);
     }
+
     if (previousStatus != status) {
       visit.setLastStatusUpdatedBy(current);
       visit.setLastStatusUpdatedAt(Instant.now());
     }
 
-
     visits.save(visit);
     redirectAttributes.addFlashAttribute("successMessage", "Visita atualizada com sucesso.");
     return resolveRedirect(target, redirect);
   }
+
   private boolean visitBelongsToStore(Visit visit, Store store) {
     if (visit.getStores() == null || store == null) {
       return false;
@@ -291,6 +298,7 @@ public class LojaVisitaController {
         .filter(Objects::nonNull)
         .anyMatch(id -> id.equals(store.getId()));
   }
+
   private static Set<VisitStatus> parseStatusFilters(List<String> rawStatuses) {
     if (rawStatuses == null || rawStatuses.isEmpty()) {
       return Collections.emptySet();
@@ -336,6 +344,7 @@ public class LojaVisitaController {
     }
     return "?" + redirect;
   }
+
   private static String resolveRedirect(String target, String redirect) {
     if (StringUtils.hasText(target) && "home".equalsIgnoreCase(target.trim())) {
       return "redirect:/home";
