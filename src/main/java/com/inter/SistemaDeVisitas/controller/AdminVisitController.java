@@ -18,6 +18,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriUtils;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.nio.charset.StandardCharsets;
 import java.time.format.DateTimeFormatter;
@@ -155,13 +156,15 @@ public class AdminVisitController {
         visit.setModality(VisitModality.fromString(modality));
         User creator = users.findByEmail(authentication.getName()).orElseThrow();
         visit.setCreatedBy(creator);
-
+        visit.setLastStatusUpdatedBy(creator);
+        visit.setLastStatusUpdatedAt(Instant.now());
+        
         visits.save(visit);
         redirectAttributes.addFlashAttribute("successMessage",
             "Visita agendada para " + scheduledDate.format(IMPORT_DATE_FORMAT) + " em " + selectedStores.size() + " loja(s).");
         return "redirect:/admin/visitas";
     }
-        @GetMapping("/{id}/editar")
+    @GetMapping("/{id}/editar")
     public String editForm(@PathVariable Long id,
                            @RequestParam(name = "redirect", required = false) String redirect,
                            Model model) {
@@ -192,6 +195,7 @@ public class AdminVisitController {
                          @RequestParam(required = false) String comment,
                          @RequestParam(name = "rating", required = false) String ratingInput,
                          @RequestParam(name = "redirect", required = false) String redirect,
+                         Authentication authentication,
                          RedirectAttributes redirectAttributes) {
         Visit visit = visits.findDetailedById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
@@ -208,6 +212,7 @@ public class AdminVisitController {
         visit.setStores(new LinkedHashSet<>(selectedStores));
 
         visit.setScheduledDate(scheduledDate);
+        VisitStatus previousStatus = visit.getStatus();
         visit.setStatus(status);
         visit.setModality(VisitModality.fromString(modality));
 
@@ -246,7 +251,12 @@ public class AdminVisitController {
             }
         }
         visit.setRating(rating);
-
+        if (previousStatus != status) {
+            User editor = users.findByEmail(authentication.getName()).orElseThrow();
+            visit.setLastStatusUpdatedBy(editor);
+            visit.setLastStatusUpdatedAt(Instant.now());
+        }
+        
         visits.save(visit);
         redirectAttributes.addFlashAttribute("successMessage", "Visita atualizada com sucesso.");
         return redirectToList(redirect);
@@ -308,7 +318,7 @@ public class AdminVisitController {
         }
         return "redirect:/admin/visitas";
     }
-        private String redirectToList(String redirect) {
+    private String redirectToList(String redirect) {
         return "redirect:/admin/visitas" + buildRedirectSuffix(redirect);
     }
 
@@ -390,6 +400,8 @@ public class AdminVisitController {
         visit.setCommercialInfo(StringUtils.hasText(commercialInfo) ? commercialInfo : null);
         visit.setComment(StringUtils.hasText(comment) ? comment : null);
         visit.setCreatedBy(creator);
+        visit.setLastStatusUpdatedBy(creator);
+        visit.setLastStatusUpdatedAt(Instant.now());
         return visit;
     }
 
