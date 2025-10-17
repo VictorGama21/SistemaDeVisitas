@@ -7,17 +7,18 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
+
+
+ import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
-
-import java.time.LocalDate;
-import java.util.List;
-
 public interface VisitRepository extends JpaRepository<Visit, Long> {
-  @EntityGraph(attributePaths = {"stores", "buyer", "supplier", "segment"})
+  @EntityGraph(attributePaths = {"stores", "buyer", "supplier", "segment", "lastStatusUpdatedBy"})
   @Query("select distinct v from Visit v join v.stores s where s = :store order by v.scheduledDate desc")
   List<Visit> findByStoreOrderByScheduledDateDesc(@Param("store") Store store);
-  @EntityGraph(attributePaths = {"stores", "buyer", "supplier", "segment"})
+  @EntityGraph(attributePaths = {"stores", "buyer", "supplier", "segment", "lastStatusUpdatedBy"})
   Optional<Visit> findDetailedById(Long id);
 
   long countByStatus(VisitStatus status);
@@ -29,26 +30,26 @@ public interface VisitRepository extends JpaRepository<Visit, Long> {
                                            @Param("start") LocalDate start,
                                            @Param("end") LocalDate end);
   
-  @EntityGraph(attributePaths = {"stores", "buyer", "supplier", "segment"})
+  @EntityGraph(attributePaths = {"stores", "buyer", "supplier", "segment", "lastStatusUpdatedBy"})
   List<Visit> findTop10ByOrderByScheduledDateDesc();
 
-  @EntityGraph(attributePaths = {"stores", "buyer", "supplier", "segment"})
+  @EntityGraph(attributePaths = {"stores", "buyer", "supplier", "segment", "lastStatusUpdatedBy"})
   @Query("select distinct v from Visit v join v.stores s where s = :store order by v.scheduledDate asc")
   List<Visit> findByStoreOrderByScheduledDateAsc(@Param("store") Store store);
 
   @Query("select v from Visit v join fetch v.stores where v.id in :ids")
   List<Visit> findAllWithStoresByIdIn(@Param("ids") List<Long> ids);
 
-  @EntityGraph(attributePaths = {"stores", "buyer", "supplier", "segment"})
+  @EntityGraph(attributePaths = {"stores", "buyer", "supplier", "segment", "lastStatusUpdatedBy"})
   @Query("select distinct v from Visit v join v.stores s where s = :store and v.scheduledDate between :start and :end order by v.scheduledDate asc")
   List<Visit> findByStoreAndScheduledDateBetween(@Param("store") Store store,
                                                   @Param("start") LocalDate start,
                                                   @Param("end") LocalDate end);
-  
-  @EntityGraph(attributePaths = {"stores", "buyer", "supplier", "segment"})
+
+  @EntityGraph(attributePaths = {"stores", "buyer", "supplier", "segment", "lastStatusUpdatedBy"})
   List<Visit> findTop20ByScheduledDateGreaterThanEqualOrderByScheduledDateAsc(LocalDate start);
 
-  @EntityGraph(attributePaths = {"stores", "buyer", "supplier", "segment"})
+  @EntityGraph(attributePaths = {"stores", "buyer", "supplier", "segment", "lastStatusUpdatedBy"})
   @Query("select distinct v from Visit v join v.stores s where s = :store and v.scheduledDate = :date order by v.createdAt asc")
   List<Visit> findByStoreAndScheduledDate(@Param("store") Store store,
                                           @Param("date") LocalDate date);
@@ -58,7 +59,7 @@ public interface VisitRepository extends JpaRepository<Visit, Long> {
                                    @Param("status") VisitStatus status,
                                    @Param("before") LocalDate before);
 
-  @EntityGraph(attributePaths = {"stores", "buyer", "supplier", "segment"})
+  @EntityGraph(attributePaths = {"stores", "buyer", "supplier", "segment", "lastStatusUpdatedBy"})
   @Query("""
       select distinct v from Visit v
       left join v.stores s
