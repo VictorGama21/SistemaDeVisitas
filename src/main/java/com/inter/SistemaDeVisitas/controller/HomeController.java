@@ -223,6 +223,7 @@ public class HomeController {
       return sqlDate.toLocalDate();
     }
     return null;
+  }
 
   private DayOfWeek parseDayFilter(String input) {
     if (input == null || input.isBlank() || "todas".equalsIgnoreCase(input)) {
