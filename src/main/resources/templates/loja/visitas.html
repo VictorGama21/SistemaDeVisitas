@@ -183,8 +183,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <th:block th:each="visit : ${visits}">
-                  <tr>
+                  <tr th:each="visit : ${visits}">
                     <td th:text="${visit.scheduledDate != null ? #temporals.format(visit.scheduledDate, 'dd/MM/yyyy') : '-'}">10/06/2024</td>
                     <td th:text="${visit.modality.label}">Promotoria - Reposição</td>
                     <td th:text="${visit.buyer != null ? visit.buyer.name : '-'}">-</td>
@@ -234,6 +233,9 @@
                           Editar feedback
                         </button>
                       </div>
+                    </td>
+                  </tr>
+                  <tr th:if="${#lists.isEmpty(visits)}">
                     <td colspan="9" class="text-center text-muted py-4">Nenhuma visita encontrada para os filtros selecionados.</td>
                   </tr>
                 </tbody>
