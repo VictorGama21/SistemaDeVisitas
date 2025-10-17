@@ -26,7 +26,13 @@ public class Visit {
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 16)
   private VisitStatus status = VisitStatus.PENDING;
+  
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "last_status_updated_by_user_id")
+  private User lastStatusUpdatedBy;
 
+  @Column(name = "last_status_updated_at")
+  private Instant lastStatusUpdatedAt;
   @Enumerated(EnumType.STRING)
   @Column(name = "modality", nullable = false, length = 32)
   private VisitModality modality = VisitModality.PROMOTORIA_REPOSICAO;
@@ -69,6 +75,13 @@ public class Visit {
     }
     updatedAt = now;
   }
+    if (lastStatusUpdatedAt == null) {
+      lastStatusUpdatedAt = now;
+    }
+    if (lastStatusUpdatedBy == null) {
+      lastStatusUpdatedBy = createdBy;
+    }
+  }
 
   @PreUpdate
   void onUpdate() {
@@ -101,6 +114,22 @@ public class Visit {
 
   public void setStatus(VisitStatus status) {
     this.status = status;
+  }
+
+  public User getLastStatusUpdatedBy() {
+    return lastStatusUpdatedBy;
+  }
+
+  public void setLastStatusUpdatedBy(User lastStatusUpdatedBy) {
+    this.lastStatusUpdatedBy = lastStatusUpdatedBy;
+  }
+
+  public Instant getLastStatusUpdatedAt() {
+    return lastStatusUpdatedAt;
+  }
+
+  public void setLastStatusUpdatedAt(Instant lastStatusUpdatedAt) {
+    this.lastStatusUpdatedAt = lastStatusUpdatedAt;
   }
 
   public VisitModality getModality() {
