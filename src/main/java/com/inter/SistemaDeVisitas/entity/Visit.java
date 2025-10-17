@@ -73,16 +73,15 @@ public class Visit {
     if (createdAt == null) {
       createdAt = now;
     }
-    updatedAt = now;
-  }
     if (lastStatusUpdatedAt == null) {
       lastStatusUpdatedAt = now;
     }
     if (lastStatusUpdatedBy == null) {
       lastStatusUpdatedBy = createdBy;
     }
+        updatedAt = now;
   }
-
+  
   @PreUpdate
   void onUpdate() {
     updatedAt = Instant.now();
