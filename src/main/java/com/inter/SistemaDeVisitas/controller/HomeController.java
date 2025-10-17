@@ -19,9 +19,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
 import java.time.temporal.TemporalAdjusters;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -124,7 +124,7 @@ public class HomeController {
       }
 
       List<String> adminStatusLabels = Arrays.stream(VisitStatus.values())
-          .map(HomeController::labelForStatus)
+          .map(VisitStatus::getSummaryLabel)
           .toList();
       List<Long> adminStatusValues = Arrays.stream(VisitStatus.values())
           .map(status -> statusSummary.getOrDefault(status, 0L))
@@ -167,6 +167,7 @@ public class HomeController {
       model.addAttribute("adminPendingCount", statusSummary.getOrDefault(VisitStatus.PENDING, 0L));
       model.addAttribute("adminNoShowCount", statusSummary.getOrDefault(VisitStatus.NO_SHOW, 0L));
       model.addAttribute("adminReopenedCount", statusSummary.getOrDefault(VisitStatus.REOPENED, 0L));
+      model.addAttribute("adminCancelledCount", statusSummary.getOrDefault(VisitStatus.CANCELLED, 0L));
     } else if (isStoreUser) {
       Store store = currentUser.getStore();
       if (store != null) {
@@ -222,15 +223,6 @@ public class HomeController {
       return sqlDate.toLocalDate();
     }
     return null;
-  }
-  private static String labelForStatus(VisitStatus status) {
-    return switch (status) {
-      case PENDING -> "Pendentes";
-      case COMPLETED -> "Concluídas";
-      case NO_SHOW -> "Não compareceu";
-      case REOPENED -> "Reabertas";
-    };
-  }
 
   private DayOfWeek parseDayFilter(String input) {
     if (input == null || input.isBlank() || "todas".equalsIgnoreCase(input)) {
