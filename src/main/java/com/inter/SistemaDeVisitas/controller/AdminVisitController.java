@@ -3,24 +3,34 @@ package com.inter.SistemaDeVisitas.controller;
 import com.inter.SistemaDeVisitas.entity.*;
 import com.inter.SistemaDeVisitas.repo.*;
 import com.inter.SistemaDeVisitas.service.CsvImportService;
+import com.inter.SistemaDeVisitas.service.VisitAnalyticsService;
+import com.inter.SistemaDeVisitas.service.VisitExportService;
+import com.inter.SistemaDeVisitas.service.VisitFilterCriteria;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriUtils;
 
 import java.io.IOException;
+import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
@@ -40,6 +50,8 @@ public class AdminVisitController {
     private final SupplierRepository suppliers;
     private final SegmentRepository segments;
     private final CsvImportService csvImportService;
+    private final VisitAnalyticsService visitAnalyticsService;
+    private final VisitExportService visitExportService;
 
     public AdminVisitController(VisitRepository visits,
                                 StoreRepository stores,
@@ -47,7 +59,9 @@ public class AdminVisitController {
                                 BuyerRepository buyers,
                                 SupplierRepository suppliers,
                                 SegmentRepository segments,
-                                CsvImportService csvImportService) {
+                                CsvImportService csvImportService,
+                                VisitAnalyticsService visitAnalyticsService,
+                                VisitExportService visitExportService) {
         this.visits = visits;
         this.stores = stores;
         this.users = users;
@@ -55,6 +69,117 @@ public class AdminVisitController {
         this.suppliers = suppliers;
         this.segments = segments;
         this.csvImportService = csvImportService;
+        this.visitAnalyticsService = visitAnalyticsService;
+        this.visitExportService = visitExportService;
+    }
+
+    private FilterContext resolveFilterContext(Long storeId,
+                                               LocalDate startDate,
+                                               LocalDate endDate,
+                                               String visitStatus,
+                                               String modality,
+                                               Long buyerId,
+                                               Long supplierId,
+                                               Long segmentId,
+                                               String dayFilter) {
+        Store selectedStore = null;
+        if (storeId != null) {
+            selectedStore = stores.findById(storeId).orElse(null);
+        }
+        LocalDate normalizedStart = startDate;
+        LocalDate normalizedEnd = endDate;
+        if (normalizedStart != null && normalizedEnd != null && normalizedEnd.isBefore(normalizedStart)) {
+            LocalDate swap = normalizedStart;
+            normalizedStart = normalizedEnd;
+            normalizedEnd = swap;
+        }
+        VisitFilterCriteria criteria = buildCriteria(dayFilter, visitStatus, modality, buyerId, supplierId, segmentId);
+        boolean hasAnyFilter = normalizedStart != null || normalizedEnd != null || selectedStore != null
+            || criteria.hasStatusFilter() || criteria.hasModalityFilter()
+            || criteria.hasBuyerFilter() || criteria.hasSupplierFilter()
+            || criteria.hasSegmentFilter() || criteria.hasDayOfWeekFilter();
+        String rawDayFilter = Optional.ofNullable(dayFilter).orElse("todos");
+        return new FilterContext(selectedStore, normalizedStart, normalizedEnd, criteria, hasAnyFilter, rawDayFilter);
+    }
+
+    private VisitFilterCriteria buildCriteria(String dayFilter,
+                                              String visitStatus,
+                                              String modality,
+                                              Long buyerId,
+                                              Long supplierId,
+                                              Long segmentId) {
+        VisitFilterCriteria.Builder builder = VisitFilterCriteria.builder();
+        DayOfWeek dayOfWeek = parseDayFilter(dayFilter);
+        if (dayOfWeek != null) {
+            builder.dayOfWeek(dayOfWeek);
+        }
+        builder.addStatus(parseVisitStatus(visitStatus));
+        builder.addModality(parseVisitModality(modality));
+        builder.buyerId(buyerId);
+        builder.supplierId(supplierId);
+        builder.segmentId(segmentId);
+        return builder.build();
+    }
+
+    private VisitStatus parseVisitStatus(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return VisitStatus.valueOf(value.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
+    }
+
+    private VisitModality parseVisitModality(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return VisitModality.valueOf(value.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
+    }
+
+    private DayOfWeek parseDayFilter(String input) {
+        if (input == null || input.isBlank() || "todos".equalsIgnoreCase(input)) {
+            return null;
+        }
+        String normalized = input.trim().toLowerCase(Locale.ROOT);
+        return switch (normalized) {
+            case "segunda" -> DayOfWeek.MONDAY;
+            case "terca", "terça" -> DayOfWeek.TUESDAY;
+            case "quarta" -> DayOfWeek.WEDNESDAY;
+            case "quinta" -> DayOfWeek.THURSDAY;
+            case "sexta" -> DayOfWeek.FRIDAY;
+            case "sabado", "sábado" -> DayOfWeek.SATURDAY;
+            case "domingo" -> DayOfWeek.SUNDAY;
+            default -> null;
+        };
+    }
+
+    private List<String> buildDayFilterOptions() {
+        return List.of("todos", "segunda", "terca", "quarta", "quinta", "sexta", "sabado", "domingo");
+    }
+
+    private String buildExportFileName(Store store) {
+        String base = store != null ? store.getName() : "todas_as_lojas";
+        if (base == null || base.isBlank()) {
+            base = "todas_as_lojas";
+        }
+        String normalized = base.replaceAll("[^a-zA-Z0-9]", "_").toLowerCase(Locale.ROOT);
+        String timestamp = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss").format(LocalDateTime.now());
+        return "visitas_" + normalized + "_" + timestamp + ".xlsx";
+    }
+
+    private record FilterContext(Store store,
+                                 LocalDate start,
+                                 LocalDate end,
+                                 VisitFilterCriteria criteria,
+                                 boolean hasAnyFilter,
+                                 String rawDayFilter) {
     }
 
     @GetMapping
@@ -63,46 +188,83 @@ public class AdminVisitController {
                        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
                        @RequestParam(name = "fim", required = false)
                        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+                       @RequestParam(name = "visitStatus", required = false) String visitStatus,
+                       @RequestParam(name = "modalidade", required = false) String modality,
+                       @RequestParam(name = "buyerId", required = false) Long buyerId,
+                       @RequestParam(name = "supplierId", required = false) Long supplierId,
+                       @RequestParam(name = "segmentId", required = false) Long segmentId,
+                       @RequestParam(name = "dia", required = false) String dayFilter,
+                       @RequestParam(name = "page", defaultValue = "0") int page,
+                       @RequestParam(name = "size", defaultValue = "20") int size,
                        Model model,
                        HttpServletRequest request) {
         List<Store> storeList = stores.findAllByOrderByNameAsc();
         List<Store> activeStores = stores.findByActiveTrueOrderByNameAsc();
-        Store selectedStore = null;
+        FilterContext context = resolveFilterContext(storeId, startDate, endDate, visitStatus, modality, buyerId, supplierId, segmentId, dayFilter);
 
-        if (storeId != null) {
-            selectedStore = stores.findById(storeId).orElse(null);
-        }
+        List<Visit> loadedVisits = context.hasAnyFilter()
+            ? visitAnalyticsService.loadVisits(context.store(), context.start(), context.end())
+            : visits.findTop10ByOrderByScheduledDateDesc();
 
-        LocalDate normalizedStart = startDate;
-        LocalDate normalizedEnd = endDate;
-        if (normalizedStart != null && normalizedEnd != null && normalizedEnd.isBefore(normalizedStart)) {
-            LocalDate swap = normalizedStart;
-            normalizedStart = normalizedEnd;
-            normalizedEnd = swap;
-        }
+        List<Visit> filteredVisits = visitAnalyticsService.applyFilters(loadedVisits, context.criteria());
 
-        boolean hasDateFilter = normalizedStart != null || normalizedEnd != null;
-        boolean hasStoreFilter = selectedStore != null;
-        List<Visit> visitList;
-        if (hasStoreFilter || hasDateFilter) {
-            visitList = visits.findByStoreAndDateRange(selectedStore, normalizedStart, normalizedEnd);
-        } else {
-            visitList = visits.findTop10ByOrderByScheduledDateDesc();
-        }
+        int pageSize = Math.max(5, Math.min(size, 100));
+        int totalVisits = filteredVisits.size();
+        int totalPages = (int) Math.ceil(totalVisits / (double) pageSize);
+        int currentPage = Math.max(0, Math.min(page, Math.max(totalPages - 1, 0)));
+        int fromIndex = Math.min(currentPage * pageSize, totalVisits);
+        int toIndex = Math.min(fromIndex + pageSize, totalVisits);
+        List<Visit> pageContent = filteredVisits.subList(fromIndex, toIndex);
 
         model.addAttribute("stores", storeList);
         model.addAttribute("availableStores", activeStores);
-        model.addAttribute("visits", visitList);
-        model.addAttribute("selectedStore", selectedStore);
-        model.addAttribute("startDate", normalizedStart);
-        model.addAttribute("endDate", normalizedEnd);
+        model.addAttribute("visits", pageContent);
+        model.addAttribute("selectedStore", context.store());
+        model.addAttribute("startDate", context.start());
+        model.addAttribute("endDate", context.end());
         model.addAttribute("buyers", buyers.findByActiveTrueOrderByNameAsc());
         model.addAttribute("suppliers", suppliers.findByActiveTrueOrderByNameAsc());
         model.addAttribute("segments", segments.findByActiveTrueOrderByNameAsc());
         model.addAttribute("modalities", VisitModality.values());
         model.addAttribute("statusOptions", VisitStatus.values());
+        model.addAttribute("dayOptions", buildDayFilterOptions());
+        model.addAttribute("selectedVisitStatus", visitStatus);
+        model.addAttribute("selectedModality", modality);
+        model.addAttribute("selectedBuyerId", buyerId);
+        model.addAttribute("selectedSupplierId", supplierId);
+        model.addAttribute("selectedSegmentId", segmentId);
+        model.addAttribute("selectedDayFilter", context.rawDayFilter());
+        model.addAttribute("currentPage", currentPage);
+        model.addAttribute("pageSize", pageSize);
+        model.addAttribute("totalPages", totalPages);
+        model.addAttribute("totalFilteredVisits", totalVisits);
         model.addAttribute("currentQuery", request.getQueryString() == null ? "" : request.getQueryString());
+        model.addAttribute("filtersApplied", context.hasAnyFilter());
         return "admin/visitas";
+    }
+
+    @GetMapping("/exportar")
+    public ResponseEntity<ByteArrayResource> export(@RequestParam(name = "storeId", required = false) Long storeId,
+                                                    @RequestParam(name = "inicio", required = false)
+                                                    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+                                                    @RequestParam(name = "fim", required = false)
+                                                    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+                                                    @RequestParam(name = "visitStatus", required = false) String visitStatus,
+                                                    @RequestParam(name = "modalidade", required = false) String modality,
+                                                    @RequestParam(name = "buyerId", required = false) Long buyerId,
+                                                    @RequestParam(name = "supplierId", required = false) Long supplierId,
+                                                    @RequestParam(name = "segmentId", required = false) Long segmentId,
+                                                    @RequestParam(name = "dia", required = false) String dayFilter) throws IOException {
+        FilterContext context = resolveFilterContext(storeId, startDate, endDate, visitStatus, modality, buyerId, supplierId, segmentId, dayFilter);
+        List<Visit> baseVisits = visitAnalyticsService.loadVisits(context.store(), context.start(), context.end());
+        List<Visit> filteredVisits = visitAnalyticsService.applyFilters(baseVisits, context.criteria());
+        byte[] file = visitExportService.export(filteredVisits, context.start(), context.end(), context.store(), context.criteria());
+        String filename = buildExportFileName(context.store());
+        return ResponseEntity.ok()
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
+            .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+            .contentLength(file.length)
+            .body(new ByteArrayResource(file));
     }
 
     @PostMapping
@@ -129,6 +291,7 @@ public class AdminVisitController {
             redirectAttributes.addFlashAttribute("errorMessage", "Nenhuma das lojas selecionadas está ativa.");
             return "redirect:/admin/visitas";
         }
+
 
         Buyer buyer = resolveBuyer(buyerName, redirectAttributes);
         if (buyerName != null && !buyerName.isBlank() && buyer == null) {
