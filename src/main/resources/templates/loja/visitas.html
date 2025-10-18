@@ -97,16 +97,23 @@
                 <h5 class="card-title mb-0">Filtros dinâmicos</h5>
                 <p class="text-muted small mb-0">Combine status, período e dia da semana para encontrar visitas específicas.</p>
               </div>
+              <div class="d-flex flex-wrap gap-2">
+                <button type="submit" form="visitsFilters" name="range" value="hoje" class="btn btn-outline-success btn-sm"
+                        th:classappend="${range == 'hoje'} ? ' active'">Hoje</button>
+                <button type="submit" form="visitsFilters" name="range" value="ontem" class="btn btn-outline-success btn-sm"
+                        th:classappend="${range == 'ontem'} ? ' active'">Ontem</button>
+                <a class="btn btn-link btn-sm" th:href="@{/loja/visitas}">Limpar filtros</a>
+              </div>
             </div>
-            <form method="get" class="row g-3 align-items-end">
-              <div class="col-md-4">
+            <form id="visitsFilters" method="get" class="row g-3 align-items-end">
+              <div class="col-12 col-lg-5">
                 <label class="form-label">Período</label>
                 <div class="input-group">
                   <input type="date" class="form-control" name="inicio" th:value="${startDate}">
                   <input type="date" class="form-control" name="fim" th:value="${endDate}">
                 </div>
               </div>
-              <div class="col-md-3">
+              <div class="col-12 col-md-4 col-lg-3">
                 <label class="form-label">Dia da semana</label>
                 <select class="form-select" name="dia">
                   <option th:each="option : ${dayOptions}"
@@ -115,7 +122,7 @@
                           th:text="${option == 'todos' ? 'Todos' : #strings.capitalize(option)}"></option>
                 </select>
               </div>
-              <div class="col-md-3">
+              <div class="col-12 col-md-8 col-lg-3">
                 <label class="form-label">Status</label>
                 <div class="d-flex flex-wrap gap-2">
                   <div th:each="option : ${statusOptions}">
@@ -128,15 +135,8 @@
                   </div>
                 </div>
               </div>
-              <div class="col-md-2 text-md-end">
-                <button type="submit" class="btn btn-success w-100">Aplicar filtros</button>
-              </div>
-              <div class="col-12 d-flex flex-wrap gap-2">
-                <button type="submit" name="range" value="hoje" class="btn btn-outline-success btn-sm"
-                        th:classappend="${range == 'hoje'} ? ' active'">Hoje</button>
-                <button type="submit" name="range" value="ontem" class="btn btn-outline-success btn-sm"
-                        th:classappend="${range == 'ontem'} ? ' active'">Ontem</button>
-                <a class="btn btn-link btn-sm" th:href="@{/loja/visitas}">Limpar filtros</a>
+              <div class="col-12 col-lg-1 text-lg-end">
+                <button type="submit" class="btn btn-success w-100">Filtrar</button>
               </div>
             </form>
           </div>
@@ -163,83 +163,137 @@
 
         <div class="card shadow-sm">
           <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
               <h5 class="card-title mb-0">Agenda detalhada</h5>
               <span class="badge" th:classappend="${activeStore.active} ? ' text-bg-success' : ' text-bg-secondary'" th:text="${activeStore.active} ? 'Loja ativa' : 'Loja inativa'"></span>
             </div>
-            <div class="table-responsive">
-              <table class="table align-middle mb-0">
-                <thead>
-                  <tr>
-                    <th>Data</th>
-                    <th>Modalidade</th>
-                    <th>Comprador</th>
-                    <th>Fornecedor</th>
-                    <th>Segmento</th>
-                    <th>Status</th>
-                    <th>Comercial</th>
-                    <th>Feedback</th>
-                    <th class="text-end">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr th:each="visit : ${visits}">
-                    <td th:text="${visit.scheduledDate != null ? #temporals.format(visit.scheduledDate, 'dd/MM/yyyy') : '-'}">10/06/2024</td>
-                    <td th:text="${visit.modality.label}">Promotoria - Reposição</td>
-                    <td th:text="${visit.buyer != null ? visit.buyer.name : '-'}">-</td>
-                    <td th:text="${visit.supplier != null ? visit.supplier.name : '-'}">-</td>
-                    <td th:text="${visit.segment != null ? visit.segment.name : '-'}">-</td>
-                    <td>
-                      <span class="badge"
-                            th:classappend="${visit.status != null} ? ' ' + visit.status.badgeClass : ' text-bg-secondary'"
-                            th:text="${visit.status != null ? visit.status.label : 'Sem status'}"></span>
-                    </td>
-                    <td th:text="${visit.commercialInfo} ?: '-'">-</td>
-                    <td>
-                      <div class="small text-muted">Comentário</div>
-                      <div th:text="${visit.comment} ?: '-'" class="mb-1">-</div>
-                      <div class="small text-muted">Nota</div>
-                      <div th:text="${visit.rating} ?: '-'">-</div>
-                      <div class="small text-muted mt-2">Última atualização de status</div>
-                      <div class="small">
+            <div th:if="${#lists.isEmpty(visits)}" class="text-center text-muted py-4">
+              Nenhuma visita encontrada para os filtros selecionados.
+            </div>
+            <div th:if="${!#lists.isEmpty(visits)}" class="d-flex flex-column gap-3">
+              <div class="card border-0 shadow-sm" th:each="visit : ${visits}">
+                <div class="card-body p-3 p-md-4">
+                  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-3">
+                    <div>
+                      <div class="d-flex flex-wrap align-items-center gap-2">
+                        <h6 class="mb-0" th:text="${visit.scheduledDate != null ? #temporals.format(visit.scheduledDate, 'dd/MM/yyyy') : 'Sem data'}"></h6>
+                        <span class="badge"
+                              th:classappend="${visit.status != null} ? ' ' + visit.status.badgeClass : ' text-bg-secondary'"
+                              th:text="${visit.status != null ? visit.status.label : 'Sem status'}"></span>
+                      </div>
+                      <div class="text-muted small" th:text="${visit.scheduledDate != null ? #temporals.format(visit.scheduledDate, 'EEEE', T(java.util.Locale).forLanguageTag('pt-BR')) : ''}"></div>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                      <form th:action="@{'/loja/visitas/' + ${visit.id} + '/status'}" method="post" class="d-inline">
+                        <input type="hidden" name="status" value="COMPLETED">
+                        <input type="hidden" name="redirect" th:value="${currentQuery}">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                        <button type="submit" class="btn btn-success btn-sm"
+                                th:disabled="${visit.status == T(com.inter.SistemaDeVisitas.entity.VisitStatus).COMPLETED}">
+                          Concluir
+                        </button>
+                      </form>
+                      <form th:action="@{'/loja/visitas/' + ${visit.id} + '/status'}" method="post" class="d-inline">
+                        <input type="hidden" name="status" value="NO_SHOW">
+                        <input type="hidden" name="redirect" th:value="${currentQuery}">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                        <button type="submit" class="btn btn-outline-danger btn-sm"
+                                th:disabled="${visit.status == T(com.inter.SistemaDeVisitas.entity.VisitStatus).NO_SHOW}">
+                          Não compareceu
+                        </button>
+                      </form>
+                      <form th:action="@{'/loja/visitas/' + ${visit.id} + '/status'}" method="post" class="d-inline">
+                        <input type="hidden" name="status" value="REOPENED">
+                        <input type="hidden" name="redirect" th:value="${currentQuery}">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                        <button type="submit" class="btn btn-outline-secondary btn-sm"
+                                th:disabled="${visit.status == T(com.inter.SistemaDeVisitas.entity.VisitStatus).REOPENED}">
+                          Reabrir visita
+                        </button>
+                      </form>
+                      <button class="btn btn-link btn-sm" type="button" data-bs-toggle="collapse" th:data-bs-target="${'#feedback-' + visit.id}">
+                        Feedback / Comentário
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="row g-3 mb-3">
+                    <div class="col-12 col-md-6 col-lg-4">
+                      <div class="text-muted small">Lojas</div>
+                      <div>
+                        <span class="badge text-bg-light me-1" th:each="store : ${visit.stores}" th:text="${store.name}"></span>
+                      </div>
+                    </div>
+                    <div class="col-6 col-md-3 col-lg-2">
+                      <div class="text-muted small">Modalidade</div>
+                      <div th:text="${visit.modality != null ? visit.modality.label : '-'}">-</div>
+                    </div>
+                    <div class="col-6 col-md-3 col-lg-2">
+                      <div class="text-muted small">Comprador</div>
+                      <div th:text="${visit.buyer != null ? visit.buyer.name : '-'}">-</div>
+                    </div>
+                    <div class="col-6 col-md-3 col-lg-2">
+                      <div class="text-muted small">Fornecedor</div>
+                      <div th:text="${visit.supplier != null ? visit.supplier.name : '-'}">-</div>
+                    </div>
+                    <div class="col-6 col-md-3 col-lg-2">
+                      <div class="text-muted small">Segmento</div>
+                      <div th:text="${visit.segment != null ? visit.segment.name : '-'}">-</div>
+                    </div>
+                  </div>
+
+                  <div class="row g-3">
+                    <div class="col-12 col-md-6">
+                      <div class="text-muted small">Informações comerciais</div>
+                      <p class="mb-0" th:text="${visit.commercialInfo} ?: 'Nenhuma informação registrada.'"></p>
+                    </div>
+                    <div class="col-12 col-md-6">
+                      <div class="text-muted small">Feedback registrado</div>
+                      <p class="mb-1" th:text="${visit.comment} ?: 'Sem comentário.'"></p>
+                      <div class="text-muted small">Nota</div>
+                      <div class="fw-semibold" th:text="${visit.rating} ?: 'Sem avaliação'">-</div>
+                      <div class="text-muted small mt-2">
+                        Atualizado em
                         <span th:text="${visit.lastStatusUpdatedAt != null ? #temporals.format(visit.lastStatusUpdatedAt, 'dd/MM/yyyy HH:mm') : '-'}">-</span>
                         <span th:if="${visit.lastStatusUpdatedBy != null}">
                           por
                           <span th:text="${visit.lastStatusUpdatedBy.name}">Usuário</span>
                         </span>
                       </div>
-                    </td>
-                    <td class="text-end">
-                      <div class="d-flex flex-column gap-1">
-                        <form th:action="@{'/loja/visitas/' + ${visit.id} + '/status'}" method="post">
-                          <input type="hidden" name="status" value="COMPLETED">
+                    </div>
+                  </div>
+
+                  <div class="collapse mt-3" th:id="${'feedback-' + visit.id}">
+                    <div class="card card-body border-success-subtle">
+                      <h6 class="mb-3">Atualizar feedback</h6>
+                      <form th:action="@{'/loja/visitas/' + ${visit.id} + '/status'}" method="post" class="row g-3">
+                        <div class="col-12 col-md-6">
+                          <label class="form-label">Comentário</label>
+                          <textarea class="form-control" name="comment" rows="3" th:text="${visit.comment}"></textarea>
+                        </div>
+                        <div class="col-6 col-md-3 col-lg-2">
+                          <label class="form-label">Nota (1 a 5)</label>
+                          <input type="number" class="form-control" name="rating" min="1" max="5" th:value="${visit.rating}">
+                        </div>
+                        <div class="col-6 col-md-3 col-lg-3">
+                          <label class="form-label">Status da visita</label>
+                          <select class="form-select" name="status">
+                            <option th:each="option : ${statusOptions}"
+                                    th:value="${option.name()}"
+                                    th:selected="${option == visit.status}"
+                                    th:text="${option.label}"></option>
+                          </select>
+                        </div>
+                        <div class="col-12 d-flex justify-content-end gap-2">
                           <input type="hidden" name="redirect" th:value="${currentQuery}">
                           <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-                          <button type="submit" class="btn btn-outline-success btn-sm">Concluir</button>
-                        </form>
-                        <form th:action="@{'/loja/visitas/' + ${visit.id} + '/status'}" method="post">
-                          <input type="hidden" name="status" value="NO_SHOW">
-                          <input type="hidden" name="redirect" th:value="${currentQuery}">
-                          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-                          <button type="submit" class="btn btn-outline-danger btn-sm">Não realizada</button>
-                        </form>
-                        <form th:action="@{'/loja/visitas/' + ${visit.id} + '/status'}" method="post">
-                          <input type="hidden" name="status" value="REOPENED">
-                          <input type="hidden" name="redirect" th:value="${currentQuery}">
-                          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-                          <button type="submit" class="btn btn-outline-secondary btn-sm">Reabrir</button>
-                        </form>
-                        <button class="btn btn-link btn-sm p-0" type="button" data-bs-toggle="collapse" th:data-bs-target="${'#feedback-' + visit.id}">
-                          Editar feedback
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr th:if="${#lists.isEmpty(visits)}">
-                    <td colspan="9" class="text-center text-muted py-4">Nenhuma visita encontrada para os filtros selecionados.</td>
-                  </tr>
-                </tbody>
-              </table>
+                          <button type="submit" class="btn btn-success">Salvar feedback</button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -265,32 +319,7 @@
           }]
         },
         options: {
-          plugins: {
-            legend: {
-              position: 'bottom'
-            }
-          }
-        }
-      });
-    }
-
-    const dailyCtx = document.getElementById('dailyChart');
-    if (dailyCtx && dailyLabels.length > 0) {
-      new Chart(dailyCtx, {
-        type: 'line',
-        data: {
-          labels: dailyLabels,
-          datasets: [{
-            label: 'Visitas',
-            data: dailyValues,
-            borderColor: '#2e7d32',
-            backgroundColor: 'rgba(46, 125, 50, 0.2)',
-            tension: 0.3,
-            fill: true
-          }]
-        },
-        options: {
-          scales: {
+              scales: {
             y: {
               beginAtZero: true,
               ticks: {
