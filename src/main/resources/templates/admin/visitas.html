@@ -81,9 +81,6 @@
           </div>
         </div>
         <div class="col-12 col-lg-8">
-          </div>
-        </div>
-        <div class="col-12 col-lg-8">
           <div class="card shadow-sm mb-3">
             <div class="card-body">
               <h5 class="card-title">Importar visitas em lote</h5>
@@ -242,7 +239,6 @@
                       <td th:text="${#temporals.format(visit.scheduledDate, 'dd/MM/yyyy')}">10/06/2024</td>
                       <td th:text="${visit.modality != null ? visit.modality.label : '-'}">Promotoria - Reposição</td>
                       <td th:text="${visit.buyer != null ? visit.buyer.name : '-'}">-</td>
-@@ -164,32 +249,65 @@
                       <td th:text="${visit.commercialInfo} ?: '-'">-</td>
                       <td th:text="${visit.comment} ?: '-'">-</td>
                       <td>
