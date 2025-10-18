@@ -1,13 +1,22 @@
 package com.inter.SistemaDeVisitas.controller;
 
+import com.inter.SistemaDeVisitas.entity.Buyer;
 import com.inter.SistemaDeVisitas.entity.RoleGroup;
+import com.inter.SistemaDeVisitas.entity.Segment;
 import com.inter.SistemaDeVisitas.entity.Store;
+import com.inter.SistemaDeVisitas.entity.Supplier;
 import com.inter.SistemaDeVisitas.entity.User;
 import com.inter.SistemaDeVisitas.entity.Visit;
+import com.inter.SistemaDeVisitas.entity.VisitModality;
 import com.inter.SistemaDeVisitas.entity.VisitStatus;
+import com.inter.SistemaDeVisitas.repo.BuyerRepository;
+import com.inter.SistemaDeVisitas.repo.SegmentRepository;
 import com.inter.SistemaDeVisitas.repo.StoreRepository;
+import com.inter.SistemaDeVisitas.repo.SupplierRepository;
 import com.inter.SistemaDeVisitas.repo.UserRepository;
 import com.inter.SistemaDeVisitas.repo.VisitRepository;
+import com.inter.SistemaDeVisitas.service.VisitAnalyticsService;
+import com.inter.SistemaDeVisitas.service.VisitFilterCriteria;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.Authentication;
@@ -32,13 +41,25 @@ public class HomeController {
   private final UserRepository userRepository;
   private final StoreRepository storeRepository;
   private final VisitRepository visitRepository;
+  private final BuyerRepository buyerRepository;
+  private final SupplierRepository supplierRepository;
+  private final SegmentRepository segmentRepository;
+  private final VisitAnalyticsService visitAnalyticsService;
 
   public HomeController(UserRepository userRepository,
                         StoreRepository storeRepository,
-                        VisitRepository visitRepository) {
+                        VisitRepository visitRepository,
+                        BuyerRepository buyerRepository,
+                        SupplierRepository supplierRepository,
+                        SegmentRepository segmentRepository,
+                        VisitAnalyticsService visitAnalyticsService) {
     this.userRepository = userRepository;
     this.storeRepository = storeRepository;
     this.visitRepository = visitRepository;
+    this.buyerRepository = buyerRepository;
+    this.supplierRepository = supplierRepository;
+    this.segmentRepository = segmentRepository;
+    this.visitAnalyticsService = visitAnalyticsService;
   }
 
   @GetMapping("/")
@@ -56,6 +77,11 @@ public class HomeController {
                      Authentication authentication,
                      @RequestParam(name = "status", required = false) String storeStatusFilter,
                      @RequestParam(name = "dia", required = false) String dayFilter,
+                     @RequestParam(name = "visitStatus", required = false) String visitStatus,
+                     @RequestParam(name = "modalidade", required = false) String modality,
+                     @RequestParam(name = "buyerId", required = false) Long buyerId,
+                     @RequestParam(name = "supplierId", required = false) Long supplierId,
+                     @RequestParam(name = "segmentId", required = false) Long segmentId,
                      @RequestParam(name = "semana", required = false) Integer weekOffsetParam,
                      @RequestParam(name = "storeId", required = false) Long storeId,
                      @RequestParam(name = "inicio", required = false)
@@ -106,22 +132,12 @@ public class HomeController {
         defaultEnd = swap;
       }
 
-      Map<VisitStatus, Long> statusSummary = new EnumMap<>(VisitStatus.class);
-      for (Object[] row : visitRepository.countByStoreAndStatusBetween(selectedStore, defaultStart, defaultEnd)) {
-        VisitStatus status = row[0] instanceof VisitStatus ? (VisitStatus) row[0] : VisitStatus.PENDING;
-        long total = row[1] instanceof Number ? ((Number) row[1]).longValue() : 0L;
-        statusSummary.merge(status, total, Long::sum);
-      }
+      VisitFilterCriteria criteria = buildCriteria(dayFilter, visitStatus, modality, buyerId, supplierId, segmentId);
+      List<Visit> adminVisits = visitAnalyticsService.loadVisits(selectedStore, defaultStart, defaultEnd);
+      List<Visit> filteredAdminVisits = visitAnalyticsService.applyFilters(adminVisits, criteria);
 
-      NavigableMap<LocalDate, Long> dailySummary = new TreeMap<>();
-      for (Object[] row : visitRepository.countDailyByStoreBetween(selectedStore, defaultStart, defaultEnd)) {
-        LocalDate date = extractLocalDate(row[0]);
-        if (date == null) {
-          continue;
-        }
-        long total = row[1] instanceof Number ? ((Number) row[1]).longValue() : 0L;
-        dailySummary.merge(date, total, Long::sum);
-      }
+      EnumMap<VisitStatus, Long> statusSummary = visitAnalyticsService.summarizeByStatus(filteredAdminVisits);
+      NavigableMap<LocalDate, Long> dailySummary = visitAnalyticsService.summarizeDaily(filteredAdminVisits);
 
       List<String> adminStatusLabels = Arrays.stream(VisitStatus.values())
           .map(VisitStatus::getSummaryLabel)
@@ -145,6 +161,19 @@ public class HomeController {
             .filter(v -> v.getScheduledDate() != null && v.getScheduledDate().getDayOfWeek() == selectedDay)
             .collect(Collectors.toList());
       }
+      VisitFilterCriteria upcomingCriteria = VisitFilterCriteria.builder()
+          .addStatus(parseVisitStatus(visitStatus))
+          .addModality(parseVisitModality(modality))
+          .buyerId(buyerId)
+          .supplierId(supplierId)
+          .segmentId(segmentId)
+          .build();
+      if (criteria.hasStatusFilter() || criteria.hasModalityFilter()
+          || criteria.hasBuyerFilter() || criteria.hasSupplierFilter() || criteria.hasSegmentFilter()) {
+        upcomingVisits = new ArrayList<>(visitAnalyticsService.applyFilters(upcomingVisits, upcomingCriteria));
+        upcomingVisits.sort(Comparator.comparing(Visit::getScheduledDate, Comparator.nullsLast(Comparator.naturalOrder()))
+            .thenComparing(Visit::getId));
+      }
 
       model.addAttribute("storeFilter", filter);
       model.addAttribute("stores", stores);
@@ -153,10 +182,20 @@ public class HomeController {
       model.addAttribute("dayFilter", selectedDay != null ? selectedDay.getDisplayName(TextStyle.FULL, new Locale("pt", "BR")) : "Todas");
       model.addAttribute("rawDayFilter", Optional.ofNullable(dayFilter).orElse("todas"));
       model.addAttribute("availableDays", buildDayFilterOptions());
+      model.addAttribute("statusOptions", VisitStatus.values());
+      model.addAttribute("modalities", VisitModality.values());
       model.addAttribute("upcomingVisits", upcomingVisits);
       model.addAttribute("adminSelectedStore", selectedStore);
       model.addAttribute("adminStartDate", defaultStart);
       model.addAttribute("adminEndDate", defaultEnd);
+      model.addAttribute("adminSelectedStatus", visitStatus);
+      model.addAttribute("adminSelectedModality", modality);
+      model.addAttribute("adminSelectedBuyerId", buyerId);
+      model.addAttribute("adminSelectedSupplierId", supplierId);
+      model.addAttribute("adminSelectedSegmentId", segmentId);
+      model.addAttribute("buyers", buyerRepository.findByActiveTrueOrderByNameAsc());
+      model.addAttribute("suppliers", supplierRepository.findByActiveTrueOrderByNameAsc());
+      model.addAttribute("segments", segmentRepository.findByActiveTrueOrderByNameAsc());
       model.addAttribute("adminStatusLabels", adminStatusLabels);
       model.addAttribute("adminStatusValues", adminStatusValues);
       model.addAttribute("adminDailyLabels", adminDailyLabels);
@@ -168,6 +207,7 @@ public class HomeController {
       model.addAttribute("adminNoShowCount", statusSummary.getOrDefault(VisitStatus.NO_SHOW, 0L));
       model.addAttribute("adminReopenedCount", statusSummary.getOrDefault(VisitStatus.REOPENED, 0L));
       model.addAttribute("adminCancelledCount", statusSummary.getOrDefault(VisitStatus.CANCELLED, 0L));
+      model.addAttribute("adminSelectedVisitDay", Optional.ofNullable(dayFilter).orElse("todas"));
     } else if (isStoreUser) {
       Store store = currentUser.getStore();
       if (store != null) {
@@ -215,16 +255,47 @@ public class HomeController {
     model.addAttribute("isStoreUser", isStoreUser);
     return "home";
   }
-  private LocalDate extractLocalDate(Object value) {
-    if (value instanceof LocalDate localDate) {
-      return localDate;
+
+  private VisitFilterCriteria buildCriteria(String dayFilter,
+                                            String visitStatus,
+                                            String modality,
+                                            Long buyerId,
+                                            Long supplierId,
+                                            Long segmentId) {
+    VisitFilterCriteria.Builder builder = VisitFilterCriteria.builder();
+    DayOfWeek dayOfWeek = parseDayFilter(dayFilter);
+    if (dayOfWeek != null) {
+      builder.dayOfWeek(dayOfWeek);
     }
-    if (value instanceof java.sql.Date sqlDate) {
-      return sqlDate.toLocalDate();
-    }
-    return null;
+    builder.addStatus(parseVisitStatus(visitStatus));
+    builder.addModality(parseVisitModality(modality));
+    builder.buyerId(buyerId);
+    builder.supplierId(supplierId);
+    builder.segmentId(segmentId);
+    return builder.build();
   }
 
+  private VisitStatus parseVisitStatus(String value) {
+    if (value == null || value.isBlank()) {
+      return null;
+    }
+    try {
+      return VisitStatus.valueOf(value.trim().toUpperCase(Locale.ROOT));
+    } catch (IllegalArgumentException ex) {
+      return null;
+    }
+  }
+
+  private VisitModality parseVisitModality(String value) {
+    if (value == null || value.isBlank()) {
+      return null;
+    }
+    try {
+      return VisitModality.valueOf(value.trim().toUpperCase(Locale.ROOT));
+    } catch (IllegalArgumentException ex) {
+      return null;
+    }
+  }
   private DayOfWeek parseDayFilter(String input) {
     if (input == null || input.isBlank() || "todas".equalsIgnoreCase(input)) {
       return null;
