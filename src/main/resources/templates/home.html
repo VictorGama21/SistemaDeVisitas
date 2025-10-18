@@ -139,7 +139,6 @@
                   <form th:action="@{'/loja/visitas/' + ${visit.id} + '/status'}" method="post">
                     <div class="row g-2 align-items-end">
                       <div class="col-12 col-md-4">
-@@ -178,51 +182,55 @@
                           th:value="${offset}"
                           th:selected="${offset == weekOffset}"
                           th:text="${offset == 0 ? 'Semana atual (' + #temporals.format(weekStart, 'dd/MM') + ' - ' + #temporals.format(weekEnd, 'dd/MM') + ')' : #temporals.format(weekBase.plusWeeks(offset), 'dd/MM') + ' - ' + #temporals.format(weekBase.plusWeeks(offset).plusDays(6), 'dd/MM')}"></option>
@@ -195,9 +194,179 @@
           </div>
         </div>
 
-@@ -268,51 +276,51 @@
-                <canvas id="adminDailyChart" height="220"></canvas>
+        <div class="card shadow-sm mb-4">
+          <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+              <div class="col-md-3">
+                <label class="form-label">Status das lojas</label>
+                <select class="form-select" name="status">
+                  <option value="ativos" th:selected="${storeFilter == 'ativos'}">Ativas</option>
+                  <option value="inativos" th:selected="${storeFilter == 'inativos'}">Inativas</option>
+                  <option value="todos" th:selected="${storeFilter == 'todos'}">Todas</option>
+                </select>
               </div>
+              <div class="col-md-3">
+                <label class="form-label">Loja</label>
+                <select class="form-select" name="storeId">
+                  <option value="" th:selected="${adminSelectedStore == null}">Todas as lojas</option>
+                  <option th:each="store : ${storeSelection}"
+                          th:value="${store.id}"
+                          th:selected="${adminSelectedStore != null and store.id == adminSelectedStore.id}"
+                          th:text="${store.name}"></option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Dia da semana</label>
+                <select class="form-select" name="dia">
+                  <option th:each="option : ${availableDays}"
+                          th:value="${option}"
+                          th:selected="${option == rawDayFilter}"
+                          th:text="${option == 'todas' ? 'Todas' : #strings.capitalize(option)}"></option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Período</label>
+                <div class="input-group">
+                  <input type="date" class="form-control" name="inicio" th:value="${adminStartDate}">
+                  <input type="date" class="form-control" name="fim" th:value="${adminEndDate}">
+                </div>
+              </div>
+              <div class="col-12 d-flex justify-content-end gap-2">
+                <a class="btn btn-link btn-sm" th:href="@{/home}">Limpar filtros</a>
+                <button type="submit" class="btn btn-success btn-sm">Aplicar filtros</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+          <div class="col-sm-6 col-lg-3">
+            <div class="card shadow-sm h-100">
+              <div class="card-body">
+                <div class="small text-muted">Visitas no período</div>
+                <div class="fs-3 fw-semibold" th:text="${adminTotalVisits}">0</div>
+                <div class="text-muted small">Concluídas: <span th:text="${adminCompletedCount}">0</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-6 col-lg-3">
+            <div class="card shadow-sm h-100">
+              <div class="card-body">
+                <div class="small text-muted">Pendentes</div>
+                <div class="fs-3 fw-semibold" th:text="${adminPendingCount}">0</div>
+                <div class="text-muted small">Não realizadas: <span th:text="${adminNoShowCount}">0</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-6 col-lg-3">
+            <div class="card shadow-sm h-100">
+              <div class="card-body">
+                <div class="small text-muted">Reabertas</div>
+                <div class="fs-3 fw-semibold" th:text="${adminReopenedCount}">0</div>
+                <div class="text-muted small">Canceladas: <span th:text="${adminCancelledCount}">0</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-6 col-lg-3">
+            <div class="card shadow-sm h-100">
+              <div class="card-body">
+                <div class="small text-muted">Lojas ativas</div>
+                <div class="fs-3 fw-semibold" th:text="${totalStoresAtivas}">0</div>
+                <div class="text-muted small">Filtro atual: <span th:text="${#strings.capitalize(storeFilter)}">Ativos</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+          <div class="col-lg-4">
+            <div class="card shadow-sm h-100">
+              <div class="card-body">
+                <h5 class="card-title">Visitas por status</h5>
+                <div th:if="${adminTotalVisits == 0}" class="text-muted small">Nenhuma visita encontrada para o período selecionado.</div>
+                <canvas th:if="${adminTotalVisits > 0}" id="adminStatusChart" height="220"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-8">
+            <div class="card shadow-sm h-100">
+              <div class="card-body">
+                <h5 class="card-title">Evolução diária</h5>
+                <div th:if="${#lists.isEmpty(adminDailyLabels)}" class="text-muted small">Não há dados suficientes para montar o gráfico.</div>
+                <canvas th:if="${!#lists.isEmpty(adminDailyLabels)}" id="adminDailyChart" height="220"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card shadow-sm mb-4">
+          <div class="card-body">
+            <h5 class="card-title">Próximas visitas</h5>
+            <p class="text-muted small mb-3">Acompanhe as visitas mais próximas para ajustar recursos e times em campo.</p>
+            <div th:if="${#lists.isEmpty(upcomingVisits)}" class="text-muted">Nenhuma visita encontrada para os próximos dias.</div>
+            <div class="list-group" th:if="${!#lists.isEmpty(upcomingVisits)}">
+              <div class="list-group-item" th:each="visit : ${upcomingVisits}">
+                <div class="d-flex flex-column flex-lg-row justify-content-between gap-2">
+                  <div>
+                    <h6 class="mb-1">
+                      <span th:text="${visit.scheduledDate != null ? #temporals.format(visit.scheduledDate, 'dd/MM/yyyy') : '-'}">10/06/2024</span>
+                      &middot;
+                      <span th:text="${visit.modality != null ? visit.modality.label : 'Modalidade não informada'}">Promotoria</span>
+                    </h6>
+                    <div class="small text-muted">
+                      Lojas:
+                      <span th:text="${visit.stores != null ? #strings.listJoin(visit.stores.?[name], ', ') : '-'}">Loja</span>
+                    </div>
+                    <div class="small text-muted">
+                      Responsável:
+                      <span th:text="${visit.buyer != null ? visit.buyer.name : '-'}">Comprador</span>
+                      &bull; Fornecedor:
+                      <span th:text="${visit.supplier != null ? visit.supplier.name : '-'}">Fornecedor</span>
+                    </div>
+                  </div>
+                  <span class="badge align-self-start"
+                        th:classappend="${visit.status != null} ? ' ' + visit.status.badgeClass : ' text-bg-secondary'"
+                        th:text="${visit.status != null ? visit.status.label : 'Sem status'}">Pendente</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="card-title mb-0">Lojas filtradas</h5>
+              <span class="badge"
+                    th:classappend="${storeFilter == 'inativos'} ? ' text-bg-secondary' : (storeFilter == 'todos' ? ' text-bg-primary' : ' text-bg-success')"
+                    th:text="${storeFilter == 'inativos' ? 'Exibindo inativas' : (storeFilter == 'todos' ? 'Todas as lojas' : 'Exibindo ativas')}"></span>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-sm align-middle mb-0">
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>CNPJ</th>
+                    <th>Situação</th>
+                    <th>Cadastro</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr th:each="store : ${stores}">
+                    <td th:text="${store.name}">Loja</td>
+                    <td th:text="${store.cnpj} ?: '-'">-</td>
+                    <td>
+                      <span class="badge"
+                            th:classappend="${store.active} ? ' text-bg-success' : ' text-bg-secondary'"
+                            th:text="${store.active ? 'Ativa' : 'Inativa'}">Ativa</span>
+                    </td>
+                    <td th:text="${store.createdAt != null ? #temporals.format(store.createdAt, 'dd/MM/yyyy') : '-'}">10/06/2024</td>
+                  </tr>
+                  <tr th:if="${#lists.isEmpty(stores)}">
+                    <td colspan="4" class="text-center text-muted py-3">Nenhuma loja encontrada para o filtro selecionado.</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -224,8 +393,7 @@
             backgroundColor: ['#2e7d32', '#ffc107', '#dc3545', '#0dcaf0', '#6c757d']
           }]
         },
-        options: {
-          plugins: { legend: { position: 'bottom' } }
+        options: {          plugins: { legend: { position: 'bottom' } }
         }
       });
     }
