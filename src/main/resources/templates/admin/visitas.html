@@ -81,6 +81,9 @@
           </div>
         </div>
         <div class="col-12 col-lg-8">
+          </div>
+        </div>
+        <div class="col-12 col-lg-8">
           <div class="card shadow-sm mb-3">
             <div class="card-body">
               <h5 class="card-title">Importar visitas em lote</h5>
@@ -103,7 +106,8 @@
           <div class="card shadow-sm">
             <div class="card-body">
               <form method="get" class="row g-3 align-items-end mb-3">
-                <div class="col-12 col-md-5">
+                <input type="hidden" name="page" value="0">
+                <div class="col-12 col-lg-3">
                   <label for="filterStore" class="form-label">Filtrar por loja</label>
                   <select id="filterStore" name="storeId" class="form-select">
                     <option value="">Todas as lojas</option>
@@ -113,21 +117,105 @@
                             th:text="${store.name}"></option>
                   </select>
                 </div>
-                <div class="col-6 col-md-3">
+                <div class="col-6 col-lg-2">
                   <label class="form-label" for="filterStart">Data inicial</label>
                   <input id="filterStart" type="date" class="form-control" name="inicio" th:value="${startDate}">
                 </div>
-                <div class="col-6 col-md-3">
+                <div class="col-6 col-lg-2">
                   <label class="form-label" for="filterEnd">Data final</label>
                   <input id="filterEnd" type="date" class="form-control" name="fim" th:value="${endDate}">
                 </div>
-                <div class="col-12 col-md-1 text-md-end">
-                  <button class="btn btn-outline-success w-100" type="submit">Filtrar</button>
+                <div class="col-6 col-lg-2">
+                  <label class="form-label" for="filterStatus">Status</label>
+                  <select id="filterStatus" name="visitStatus" class="form-select">
+                    <option value="">Todos</option>
+                    <option th:each="status : ${statusOptions}"
+                            th:value="${status.name()}"
+                            th:selected="${selectedVisitStatus != null and status.name() == selectedVisitStatus}"
+                            th:text="${status.label}"></option>
+                  </select>
                 </div>
-                <div class="col-12">
-                  <a class="btn btn-link btn-sm p-0" th:href="@{/admin/visitas}">Limpar filtros</a>
+                <div class="col-6 col-lg-3">
+                  <label class="form-label" for="filterModality">Modalidade</label>
+                  <select id="filterModality" name="modalidade" class="form-select">
+                    <option value="">Todas</option>
+                    <option th:each="modality : ${modalities}"
+                            th:value="${modality.name()}"
+                            th:selected="${selectedModality != null and modality.name() == selectedModality}"
+                            th:text="${modality.label}"></option>
+                  </select>
+                </div>
+                <div class="col-12 col-lg-3">
+                  <label class="form-label" for="filterBuyer">Comprador</label>
+                  <select id="filterBuyer" name="buyerId" class="form-select">
+                    <option value="">Todos</option>
+                    <option th:each="buyer : ${buyers}"
+                            th:value="${buyer.id}"
+                            th:selected="${selectedBuyerId != null and buyer.id == selectedBuyerId}"
+                            th:text="${buyer.name}"></option>
+                  </select>
+                </div>
+                <div class="col-12 col-lg-3">
+                  <label class="form-label" for="filterSupplier">Fornecedor</label>
+                  <select id="filterSupplier" name="supplierId" class="form-select">
+                    <option value="">Todos</option>
+                    <option th:each="supplier : ${suppliers}"
+                            th:value="${supplier.id}"
+                            th:selected="${selectedSupplierId != null and supplier.id == selectedSupplierId}"
+                            th:text="${supplier.name}"></option>
+                  </select>
+                </div>
+                <div class="col-12 col-lg-3">
+                  <label class="form-label" for="filterSegment">Segmento</label>
+                  <select id="filterSegment" name="segmentId" class="form-select">
+                    <option value="">Todos</option>
+                    <option th:each="segment : ${segments}"
+                            th:value="${segment.id}"
+                            th:selected="${selectedSegmentId != null and segment.id == selectedSegmentId}"
+                            th:text="${segment.name}"></option>
+                  </select>
+                </div>
+                <div class="col-6 col-lg-2">
+                  <label class="form-label" for="filterDay">Dia da semana</label>
+                  <select id="filterDay" name="dia" class="form-select">
+                    <option th:each="option : ${dayOptions}"
+                            th:value="${option}"
+                            th:selected="${option == selectedDayFilter}"
+                            th:text="${option == 'todos' ? 'Todos' : #strings.capitalize(option)}"></option>
+                  </select>
+                </div>
+                <div class="col-6 col-lg-2">
+                  <label class="form-label" for="filterSize">Itens por página</label>
+                  <select id="filterSize" name="size" class="form-select">
+                    <option value="10" th:selected="${pageSize == 10}">10</option>
+                    <option value="20" th:selected="${pageSize == 20}">20</option>
+                    <option value="50" th:selected="${pageSize == 50}">50</option>
+                    <option value="100" th:selected="${pageSize == 100}">100</option>
+                  </select>
+                </div>
+                <div class="col-12 col-lg-2 text-lg-end">
+                  <button class="btn btn-success w-100" type="submit">Aplicar filtros</button>
+                  <a class="btn btn-link btn-sm d-block mt-2" th:href="@{/admin/visitas}">Limpar</a>
                 </div>
               </form>
+
+              <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2 mb-3">
+                <div class="small text-muted">
+                  <span th:text="${totalFilteredVisits}">0</span> visita(s) encontradas.
+                </div>
+                <form method="get" th:action="@{/admin/visitas/exportar}" class="d-flex flex-wrap gap-2 align-items-center">
+                  <input type="hidden" name="storeId" th:value="${selectedStore != null ? selectedStore.id : ''}">
+                  <input type="hidden" name="inicio" th:value="${startDate}">
+                  <input type="hidden" name="fim" th:value="${endDate}">
+                  <input type="hidden" name="visitStatus" th:value="${selectedVisitStatus}">
+                  <input type="hidden" name="modalidade" th:value="${selectedModality}">
+                  <input type="hidden" name="buyerId" th:value="${selectedBuyerId}">
+                  <input type="hidden" name="supplierId" th:value="${selectedSupplierId}">
+                  <input type="hidden" name="segmentId" th:value="${selectedSegmentId}">
+                  <input type="hidden" name="dia" th:value="${selectedDayFilter}">
+                  <button type="submit" class="btn btn-outline-success btn-sm">Exportar XLSX</button>
+                </form>
+              </div>
 
               <div class="table-responsive">
                 <table class="table align-middle mb-0">
@@ -154,13 +242,7 @@
                       <td th:text="${#temporals.format(visit.scheduledDate, 'dd/MM/yyyy')}">10/06/2024</td>
                       <td th:text="${visit.modality != null ? visit.modality.label : '-'}">Promotoria - Reposição</td>
                       <td th:text="${visit.buyer != null ? visit.buyer.name : '-'}">-</td>
-                      <td th:text="${visit.supplier != null ? visit.supplier.name : '-'}">-</td>
-                      <td th:text="${visit.segment != null ? visit.segment.name : '-'}">-</td>
-                      <td>
-                        <span class="badge"
-                              th:classappend="${visit.status != null} ? ' ' + visit.status.badgeClass : ' text-bg-secondary'"
-                              th:text="${visit.status != null ? visit.status.label : 'Sem status'}"></span>
-                      </td>
+@@ -164,32 +249,65 @@
                       <td th:text="${visit.commercialInfo} ?: '-'">-</td>
                       <td th:text="${visit.comment} ?: '-'">-</td>
                       <td>
@@ -185,6 +267,39 @@
                     </tr>
                   </tbody>
                 </table>
+              </div>
+
+              <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2 mt-3">
+                <form method="get" class="d-inline-flex gap-2">
+                  <input type="hidden" name="page" th:value="${currentPage - 1}">
+                  <input type="hidden" name="size" th:value="${pageSize}">
+                  <input type="hidden" name="storeId" th:value="${selectedStore != null ? selectedStore.id : ''}">
+                  <input type="hidden" name="inicio" th:value="${startDate}">
+                  <input type="hidden" name="fim" th:value="${endDate}">
+                  <input type="hidden" name="visitStatus" th:value="${selectedVisitStatus}">
+                  <input type="hidden" name="modalidade" th:value="${selectedModality}">
+                  <input type="hidden" name="buyerId" th:value="${selectedBuyerId}">
+                  <input type="hidden" name="supplierId" th:value="${selectedSupplierId}">
+                  <input type="hidden" name="segmentId" th:value="${selectedSegmentId}">
+                  <input type="hidden" name="dia" th:value="${selectedDayFilter}">
+                  <button class="btn btn-outline-secondary btn-sm" type="submit" th:disabled="${currentPage == 0}">Anterior</button>
+                </form>
+                <span class="small text-muted">Página <span th:text="${currentPage + 1}">1</span> de <span th:text="${totalPages == 0 ? 1 : totalPages}">1</span></span>
+                <form method="get" class="d-inline-flex gap-2">
+                  <input type="hidden" name="page" th:value="${currentPage + 1}">
+                  <input type="hidden" name="size" th:value="${pageSize}">
+                  <input type="hidden" name="storeId" th:value="${selectedStore != null ? selectedStore.id : ''}">
+                  <input type="hidden" name="inicio" th:value="${startDate}">
+                  <input type="hidden" name="fim" th:value="${endDate}">
+                  <input type="hidden" name="visitStatus" th:value="${selectedVisitStatus}">
+                  <input type="hidden" name="modalidade" th:value="${selectedModality}">
+                  <input type="hidden" name="buyerId" th:value="${selectedBuyerId}">
+                  <input type="hidden" name="supplierId" th:value="${selectedSupplierId}">
+                  <input type="hidden" name="segmentId" th:value="${selectedSegmentId}">
+                  <input type="hidden" name="dia" th:value="${selectedDayFilter}">
+                  <button class="btn btn-outline-secondary btn-sm" type="submit"
+                          th:disabled="${totalPages == 0 or currentPage + 1 >= totalPages}">Próxima</button>
+                </form>
               </div>
             </div>
           </div>
