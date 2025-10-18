@@ -15,6 +15,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
+import com.inter.SistemaDeVisitas.entity.User;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -162,7 +163,16 @@ public class VisitExportService {
         updatedAtCell.setCellStyle(textStyle);
 
         Cell updatedByCell = row.createCell(col++);
-        updatedByCell.setCellValue(visit.getLastStatusUpdatedBy() != null ? visit.getLastStatusUpdatedBy().getName() : "-");
+        String updatedByDisplay = "-";
+        if (visit.getLastStatusUpdatedBy() != null) {
+          User updatedBy = visit.getLastStatusUpdatedBy();
+          if (updatedBy.getFullName() != null && !updatedBy.getFullName().isBlank()) {
+            updatedByDisplay = updatedBy.getFullName();
+          } else if (updatedBy.getEmail() != null && !updatedBy.getEmail().isBlank()) {
+            updatedByDisplay = updatedBy.getEmail();
+          }
+        }
+        updatedByCell.setCellValue(updatedByDisplay);
         updatedByCell.setCellStyle(textStyle);
       }
 
