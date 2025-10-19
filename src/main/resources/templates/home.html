@@ -293,17 +293,16 @@
 
         <div class="card shadow-sm mb-4">
           <div class="card-body">
-            <form method="get" class="row g-3 align-items-end">
-              <div class="col-lg-3">
-                <label class="form-label" for="adminStoreFilter">Situação das lojas</label>
-                <select class="form-select" id="adminStoreFilter" name="status">
-                  <option value="ativos" th:selected="${storeFilter == 'ativos'}">Lojas ativas</option>
-                  <option value="inativos" th:selected="${storeFilter == 'inativos'}">Lojas inativas</option>
-                  <option value="todos" th:selected="${storeFilter == 'todos'}">Todas as lojas</option>
-                </select>
+            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2 mb-3">
+              <div>
+                <h5 class="card-title mb-0">Filtrar painel</h5>
+                <small class="text-muted">Selecione loja e período para atualizar os gráficos.</small>
               </div>
-              <div class="col-lg-3">
-                <label class="form-label" for="adminStore">Filtrar por loja</label>
+              <span class="badge text-bg-light" th:if="${adminSelectedStore != null}" th:text="${adminSelectedStore.name}">Loja</span>
+            </div>
+            <form method="get" class="row g-3 align-items-end">
+              <div class="col-sm-6 col-lg-3">
+                <label class="form-label" for="adminStore">Loja</label>
                 <select class="form-select" id="adminStore" name="storeId">
                   <option value="">Todas</option>
                   <option th:each="store : ${storeSelection}"
@@ -312,16 +311,16 @@
                           th:text="${store.name}"></option>
                 </select>
               </div>
-              <div class="col-md-3 col-lg-2">
-                <label class="form-label" for="adminStart">Data inicial</label>
+              <div class="col-sm-6 col-lg-2">
+                <label class="form-label" for="adminStart">Início</label>
                 <input class="form-control" type="date" id="adminStart" name="inicio" th:value="${adminStartDate}">
               </div>
-              <div class="col-md-3 col-lg-2">
-                <label class="form-label" for="adminEnd">Data final</label>
+              <div class="col-sm-6 col-lg-2">
+                <label class="form-label" for="adminEnd">Fim</label>
                 <input class="form-control" type="date" id="adminEnd" name="fim" th:value="${adminEndDate}">
               </div>
-              <div class="col-md-4 col-lg-2">
-                <label class="form-label" for="adminStatus">Status da visita</label>
+              <div class="col-sm-6 col-lg-2">
+                <label class="form-label" for="adminStatus">Status</label>
                 <select class="form-select" id="adminStatus" name="visitStatus">
                   <option value="">Todos</option>
                   <option th:each="status : ${statusOptions}"
@@ -330,47 +329,7 @@
                           th:text="${status.label}"></option>
                 </select>
               </div>
-              <div class="col-md-4 col-lg-2">
-                <label class="form-label" for="adminModality">Modalidade</label>
-                <select class="form-select" id="adminModality" name="modalidade">
-                  <option value="">Todas</option>
-                  <option th:each="modality : ${modalities}"
-                          th:value="${modality.name()}"
-                          th:selected="${adminSelectedModality != null and modality.name() == adminSelectedModality}"
-                          th:text="${modality.label}"></option>
-                </select>
-              </div>
-              <div class="col-md-4 col-lg-3">
-                <label class="form-label" for="adminBuyer">Comprador</label>
-                <select class="form-select" id="adminBuyer" name="buyerId">
-                  <option value="">Todos</option>
-                  <option th:each="buyer : ${buyers}"
-                          th:value="${buyer.id}"
-                          th:selected="${adminSelectedBuyerId != null and buyer.id == adminSelectedBuyerId}"
-                          th:text="${buyer.name}"></option>
-                </select>
-              </div>
-              <div class="col-md-4 col-lg-3">
-                <label class="form-label" for="adminSupplier">Fornecedor</label>
-                <select class="form-select" id="adminSupplier" name="supplierId">
-                  <option value="">Todos</option>
-                  <option th:each="supplier : ${suppliers}"
-                          th:value="${supplier.id}"
-                          th:selected="${adminSelectedSupplierId != null and supplier.id == adminSelectedSupplierId}"
-                          th:text="${supplier.name}"></option>
-                </select>
-              </div>
-              <div class="col-md-4 col-lg-3">
-                <label class="form-label" for="adminSegment">Segmento</label>
-                <select class="form-select" id="adminSegment" name="segmentId">
-                  <option value="">Todos</option>
-                  <option th:each="segment : ${segments}"
-                          th:value="${segment.id}"
-                          th:selected="${adminSelectedSegmentId != null and segment.id == adminSelectedSegmentId}"
-                          th:text="${segment.name}"></option>
-                </select>
-              </div>
-              <div class="col-md-4 col-lg-2">
+              <div class="col-sm-6 col-lg-2">
                 <label class="form-label" for="adminDay">Dia da semana</label>
                 <select class="form-select" id="adminDay" name="dia">
                   <option th:each="option : ${availableDays}"
@@ -379,9 +338,8 @@
                           th:text="${option == 'todas' ? 'Todos' : #strings.capitalize(option)}"></option>
                 </select>
               </div>
-              <div class="col-md-4 col-lg-2 text-lg-end">
-                <input type="hidden" name="semana" th:if="${param.semana}" th:value="${param.semana[0]}">
-                <button class="btn btn-success w-100" type="submit">Aplicar filtros</button>
+              <div class="col-sm-6 col-lg-1 text-lg-end">
+                <button class="btn btn-success w-100" type="submit">Aplicar</button>
                 <a class="btn btn-link btn-sm d-block mt-1" th:href="@{/home}">Limpar</a>
               </div>
             </form>
@@ -405,10 +363,18 @@
                 <ul class="list-unstyled small mb-0">
                   <li th:each="status : ${T(com.inter.SistemaDeVisitas.entity.VisitStatus).values()}">
                     <span class="fw-semibold" th:text="${status.summaryLabel}">Status</span>:
-                  <div>
-                    <h5 class="card-title mb-0">Evolução diária</h5>
-                    <small class="text-muted">Período: <span th:text="${#temporals.format(adminStartDate, 'dd/MM')} + ' - ' + ${#temporals.format(adminEndDate, 'dd/MM')}">01/06 - 30/06</span></small>
-                  </div>
+                    <span th:text="${adminStatusSummary[status]} ?: 0">0</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="col-12 col-lg-6">
+            <div class="card shadow-sm h-100">
+              <div class="card-body">
+                <div>
+                  <h5 class="card-title mb-0">Evolução diária</h5>
+                  <small class="text-muted">Período: <span th:text="${#temporals.format(adminStartDate, 'dd/MM')} + ' - ' + ${#temporals.format(adminEndDate, 'dd/MM')}">01/06 - 30/06</span></small>
                 </div>
                 <div class="ratio ratio-4x3">
                   <canvas id="adminDailyChart"></canvas>
@@ -418,48 +384,6 @@
           </div>
         </div>
 
-        <div class="card shadow-sm mb-4">
-          <div class="card-body">
-            <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 mb-3">
-              <div>
-                <h5 class="card-title mb-0">Próximas visitas</h5>
-                <p class="text-muted small mb-0">Filtradas pela loja e período selecionados.</p>
-              </div>
-              <form class="d-flex flex-column flex-sm-row align-items-sm-center gap-2" method="get" th:action="@{/home}">
-                <input type="hidden" name="status" th:if="${param.status}" th:value="${param.status[0]}">
-                <input type="hidden" name="storeId" th:if="${param.storeId}" th:value="${param.storeId[0]}">
-                <input type="hidden" name="inicio" th:if="${param.inicio}" th:value="${param.inicio[0]}">
-                <input type="hidden" name="fim" th:if="${param.fim}" th:value="${param.fim[0]}">
-                <input type="hidden" name="visitStatus" th:if="${param.visitStatus}" th:value="${param.visitStatus[0]}">
-                <input type="hidden" name="modalidade" th:if="${param.modalidade}" th:value="${param.modalidade[0]}">
-                <input type="hidden" name="buyerId" th:if="${param.buyerId}" th:value="${param.buyerId[0]}">
-                <input type="hidden" name="supplierId" th:if="${param.supplierId}" th:value="${param.supplierId[0]}">
-                <input type="hidden" name="segmentId" th:if="${param.segmentId}" th:value="${param.segmentId[0]}">
-                <input type="hidden" name="semana" th:if="${param.semana}" th:value="${param.semana[0]}">
-                <label class="form-label mb-0" for="dayFilterSelect">Dia da semana</label>
-                <select class="form-select form-select-sm" id="dayFilterSelect" name="dia">
-                  <option th:each="option : ${availableDays}"
-                          th:value="${option}"
-                          th:selected="${option == rawDayFilter}"
-                          th:text="${option == 'todas' ? 'Todos' : #strings.capitalize(option)}"></option>
-                </select>
-                <button class="btn btn-outline-success btn-sm" type="submit">Aplicar</button>
-              </form>
-            </div>
-            <div th:if="${#lists.isEmpty(upcomingVisits)}" class="text-muted">Nenhuma visita encontrada para os filtros informados.</div>
-            <div class="list-group" th:if="${!#lists.isEmpty(upcomingVisits)}">
-              <div class="list-group-item" th:each="visit : ${upcomingVisits}">
-                <div class="d-flex flex-column flex-lg-row justify-content-between gap-3">
-                  <div>
-                    <div class="d-flex flex-wrap gap-1 mb-1">
-                      <span class="badge text-bg-light" th:each="store : ${visit.stores}" th:text="${store.name}">Loja</span>
-                    </div>
-                    <h6 class="mb-1" th:text="${visit.modality != null ? visit.modality.label : 'Visita'}">Modalidade</h6>
-                    <div class="small text-muted">
-                      Comprador:
-                      <span th:text="${visit.buyer != null ? visit.buyer.name : '-'}">-</span>
-                      &bull; Fornecedor:
-                      <span th:text="${visit.supplier != null ? visit.supplier.name : '-'}">-</span>
   <!-- Chart.js -->
   <script th:inline="javascript">
     const adminStatusLabels = /*[[${adminStatusLabels}]]*/ [];
