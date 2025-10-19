@@ -8,8 +8,14 @@ import com.inter.SistemaDeVisitas.entity.VisitStatus;
 import com.inter.SistemaDeVisitas.repo.StoreRepository;
 import com.inter.SistemaDeVisitas.repo.UserRepository;
 import com.inter.SistemaDeVisitas.repo.VisitRepository;
+import com.inter.SistemaDeVisitas.service.VisitExportService;
+import com.inter.SistemaDeVisitas.service.VisitFilterCriteria;
+import org.springframework.core.io.ByteArrayResource;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -20,8 +26,10 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.util.StringUtils;
 
 import java.time.DayOfWeek;
+import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
 import java.util.*;
@@ -34,13 +42,16 @@ public class LojaVisitaController {
   private final UserRepository users;
   private final StoreRepository stores;
   private final VisitRepository visits;
+  private final VisitExportService visitExportService;
 
   public LojaVisitaController(UserRepository users,
                               StoreRepository stores,
-                              VisitRepository visits) {
+                              VisitRepository visits,
+                              VisitExportService visitExportService) {
     this.users = users;
     this.stores = stores;
     this.visits = visits;
+    this.visitExportService = visitExportService;
   }
 
   @GetMapping
@@ -66,118 +77,32 @@ public class LojaVisitaController {
     model.addAttribute("roleGroup", roleGroup);
 
     if (store != null) {
-      LocalDate today = LocalDate.now();
-      LocalDate normalizedStart = startDate;
-      LocalDate normalizedEnd = endDate;
-      String normalizedRange = range == null ? "" : range.trim().toLowerCase(Locale.ROOT);
-
-      if ("hoje".equals(normalizedRange)) {
-        normalizedStart = today;
-        normalizedEnd = today;
-      } else if ("ontem".equals(normalizedRange)) {
-        normalizedStart = today.minusDays(1);
-        normalizedEnd = today.minusDays(1);
-      }
-
-      if (normalizedStart != null && normalizedEnd != null && normalizedEnd.isBefore(normalizedStart)) {
-        LocalDate swap = normalizedStart;
-        normalizedStart = normalizedEnd;
-        normalizedEnd = swap;
-      }
-
-      List<Visit> allStoreVisits = visits.findByStoreOrderByScheduledDateDesc(store);
-      List<Visit> storeVisits = new ArrayList<>(allStoreVisits);
-
-      long overduePendingCount = visits.countByStoreAndStatusBefore(store, VisitStatus.PENDING, today);
-      boolean hasOverduePending = overduePendingCount > 0;
-
-      if (normalizedStart != null) {
-        LocalDate finalStart = normalizedStart;
-        storeVisits = storeVisits.stream()
-            .filter(v -> v.getScheduledDate() != null && !v.getScheduledDate().isBefore(finalStart))
-            .collect(Collectors.toList());
-      }
-      if (normalizedEnd != null) {
-        LocalDate finalEnd = normalizedEnd;
-        storeVisits = storeVisits.stream()
-            .filter(v -> v.getScheduledDate() != null && !v.getScheduledDate().isAfter(finalEnd))
-            .collect(Collectors.toList());
-      }
-
-      Set<VisitStatus> selectedStatuses = parseStatusFilters(statusFilters);
-      if (!selectedStatuses.isEmpty()) {
-        storeVisits = storeVisits.stream()
-            .filter(v -> selectedStatuses.contains(v.getStatus()))
-            .collect(Collectors.toList());
-      }
-
-      DayOfWeek selectedDay = parseDayFilter(dayFilter);
-      if (selectedDay != null) {
-        storeVisits = storeVisits.stream()
-            .filter(v -> v.getScheduledDate() != null && v.getScheduledDate().getDayOfWeek() == selectedDay)
-            .collect(Collectors.toList());
-      }
-
-      storeVisits.sort(Comparator.comparing(Visit::getScheduledDate, Comparator.nullsLast(Comparator.naturalOrder())).reversed());
-
-      Map<VisitStatus, Long> statusCounts = storeVisits.stream()
-          .collect(Collectors.groupingBy(Visit::getStatus, () -> new EnumMap<>(VisitStatus.class), Collectors.counting()));
-
-      long totalVisits = storeVisits.size();
-      long completedCount = statusCounts.getOrDefault(VisitStatus.COMPLETED, 0L);
-      long pendingCount = statusCounts.getOrDefault(VisitStatus.PENDING, 0L);
-      long noShowCount = statusCounts.getOrDefault(VisitStatus.NO_SHOW, 0L);
-      long reopenedCount = statusCounts.getOrDefault(VisitStatus.REOPENED, 0L);
-      long cancelledCount = statusCounts.getOrDefault(VisitStatus.CANCELLED, 0L);
-      long todayCount = storeVisits.stream()
-          .filter(v -> v.getScheduledDate() != null && v.getScheduledDate().isEqual(today))
-          .count();
-      long yesterdayCount = storeVisits.stream()
-          .filter(v -> v.getScheduledDate() != null && v.getScheduledDate().isEqual(today.minusDays(1)))
-          .count();
-
-      double completionRate = totalVisits > 0 ? (completedCount * 100.0) / totalVisits : 0.0;
-
-      Map<LocalDate, Long> visitsPerDay = storeVisits.stream()
-          .filter(v -> v.getScheduledDate() != null)
-          .collect(Collectors.groupingBy(Visit::getScheduledDate, TreeMap::new, Collectors.counting()));
-
-      DateTimeFormatter dayFormatter = DateTimeFormatter.ofPattern("dd/MM");
-      List<String> dailyChartLabels = visitsPerDay.keySet().stream()
-          .map(dayFormatter::format)
-          .collect(Collectors.toList());
-      List<Long> dailyChartValues = new ArrayList<>(visitsPerDay.values());
-
-      List<String> statusChartLabels = Arrays.stream(VisitStatus.values())
-          .map(VisitStatus::getLabel)
-          .collect(Collectors.toList());
-      List<Long> statusChartValues = Arrays.stream(VisitStatus.values())
-          .map(status -> statusCounts.getOrDefault(status, 0L))
-          .collect(Collectors.toList());
-
-      model.addAttribute("visits", storeVisits);
-      model.addAttribute("selectedStatuses", selectedStatuses);
-      model.addAttribute("selectedDay", selectedDay != null ? selectedDay.getDisplayName(TextStyle.FULL, new Locale("pt", "BR")) : "todos");
-      model.addAttribute("rawDayFilter", Optional.ofNullable(dayFilter).orElse("todos"));
-      model.addAttribute("range", normalizedRange);
-      model.addAttribute("startDate", normalizedStart);
-      model.addAttribute("endDate", normalizedEnd);
-      model.addAttribute("totalVisits", totalVisits);
-      model.addAttribute("completedCount", completedCount);
-      model.addAttribute("pendingCount", pendingCount);
-      model.addAttribute("noShowCount", noShowCount);
-      model.addAttribute("reopenedCount", reopenedCount);
-      model.addAttribute("cancelledCount", cancelledCount);
-      model.addAttribute("completionRate", completionRate);
-      model.addAttribute("todayCount", todayCount);
-      model.addAttribute("yesterdayCount", yesterdayCount);
-      model.addAttribute("statusChartLabels", statusChartLabels);
-      model.addAttribute("statusChartValues", statusChartValues);
-      model.addAttribute("dailyChartLabels", dailyChartLabels);
-      model.addAttribute("dailyChartValues", dailyChartValues);
-      model.addAttribute("hasOverduePending", hasOverduePending);
-      model.addAttribute("overduePendingCount", overduePendingCount);
-      model.addAttribute("today", today);
+      StoreVisitPageData data = prepareStoreVisitData(store, statusFilters, startDate, endDate, dayFilter, range);
+      model.addAttribute("visits", data.visits());
+      model.addAttribute("selectedStatuses", data.selectedStatuses());
+      model.addAttribute("selectedDay", data.selectedDay() != null
+          ? data.selectedDay().getDisplayName(TextStyle.FULL, new Locale("pt", "BR"))
+          : "todos");
+      model.addAttribute("rawDayFilter", data.rawDayFilter());
+      model.addAttribute("range", data.range());
+      model.addAttribute("startDate", data.startDate());
+      model.addAttribute("endDate", data.endDate());
+      model.addAttribute("totalVisits", data.totalVisits());
+      model.addAttribute("completedCount", data.completedCount());
+      model.addAttribute("pendingCount", data.pendingCount());
+      model.addAttribute("noShowCount", data.noShowCount());
+      model.addAttribute("reopenedCount", data.reopenedCount());
+      model.addAttribute("cancelledCount", data.cancelledCount());
+      model.addAttribute("completionRate", data.completionRate());
+      model.addAttribute("todayCount", data.todayCount());
+      model.addAttribute("yesterdayCount", data.yesterdayCount());
+      model.addAttribute("statusChartLabels", data.statusChartLabels());
+      model.addAttribute("statusChartValues", data.statusChartValues());
+      model.addAttribute("dailyChartLabels", data.dailyChartLabels());
+      model.addAttribute("dailyChartValues", data.dailyChartValues());
+      model.addAttribute("hasOverduePending", data.hasOverduePending());
+      model.addAttribute("overduePendingCount", data.overduePendingCount());
+      model.addAttribute("today", data.today());
     } else {
       model.addAttribute("visits", Collections.emptyList());
       model.addAttribute("selectedStatuses", Collections.emptySet());
@@ -210,6 +135,193 @@ public class LojaVisitaController {
     return "loja/visitas";
   }
 
+  private StoreVisitPageData prepareStoreVisitData(Store store,
+                                                  List<String> statusFilters,
+                                                  LocalDate startDate,
+                                                  LocalDate endDate,
+                                                  String dayFilter,
+                                                  String range) {
+    LocalDate today = LocalDate.now();
+    LocalDate normalizedStart = startDate;
+    LocalDate normalizedEnd = endDate;
+    String normalizedRange = range == null ? "" : range.trim().toLowerCase(Locale.ROOT);
+
+    if ("hoje".equals(normalizedRange)) {
+      normalizedStart = today;
+      normalizedEnd = today;
+    } else if ("ontem".equals(normalizedRange)) {
+      normalizedStart = today.minusDays(1);
+      normalizedEnd = today.minusDays(1);
+    }
+
+    if (normalizedStart != null && normalizedEnd != null && normalizedEnd.isBefore(normalizedStart)) {
+      LocalDate swap = normalizedStart;
+      normalizedStart = normalizedEnd;
+      normalizedEnd = swap;
+    }
+
+    List<Visit> storeVisits = new ArrayList<>(visits.findByStoreOrderByScheduledDateDesc(store));
+
+    if (normalizedStart != null) {
+      LocalDate finalStart = normalizedStart;
+      storeVisits = storeVisits.stream()
+          .filter(v -> v.getScheduledDate() != null && !v.getScheduledDate().isBefore(finalStart))
+          .collect(Collectors.toList());
+    }
+    if (normalizedEnd != null) {
+      LocalDate finalEnd = normalizedEnd;
+      storeVisits = storeVisits.stream()
+          .filter(v -> v.getScheduledDate() != null && !v.getScheduledDate().isAfter(finalEnd))
+          .collect(Collectors.toList());
+    }
+
+    Set<VisitStatus> selectedStatuses = parseStatusFilters(statusFilters);
+    if (!selectedStatuses.isEmpty()) {
+      Set<VisitStatus> finalSelectedStatuses = selectedStatuses;
+      storeVisits = storeVisits.stream()
+          .filter(v -> finalSelectedStatuses.contains(v.getStatus()))
+          .collect(Collectors.toList());
+    }
+
+    DayOfWeek selectedDay = parseDayFilter(dayFilter);
+    if (selectedDay != null) {
+      DayOfWeek finalSelectedDay = selectedDay;
+      storeVisits = storeVisits.stream()
+          .filter(v -> v.getScheduledDate() != null && v.getScheduledDate().getDayOfWeek() == finalSelectedDay)
+          .collect(Collectors.toList());
+    }
+
+    storeVisits.sort(Comparator.comparing(Visit::getScheduledDate, Comparator.nullsLast(Comparator.naturalOrder())).reversed()
+        .thenComparing(Visit::getId, Comparator.nullsLast(Comparator.reverseOrder())));
+
+    Map<VisitStatus, Long> statusCounts = storeVisits.stream()
+        .collect(Collectors.groupingBy(Visit::getStatus, () -> new EnumMap<>(VisitStatus.class), Collectors.counting()));
+
+    long totalVisits = storeVisits.size();
+    long completedCount = statusCounts.getOrDefault(VisitStatus.COMPLETED, 0L);
+    long pendingCount = statusCounts.getOrDefault(VisitStatus.PENDING, 0L);
+    long noShowCount = statusCounts.getOrDefault(VisitStatus.NO_SHOW, 0L);
+    long reopenedCount = statusCounts.getOrDefault(VisitStatus.REOPENED, 0L);
+    long cancelledCount = statusCounts.getOrDefault(VisitStatus.CANCELLED, 0L);
+    long todayCount = storeVisits.stream()
+        .filter(v -> v.getScheduledDate() != null && v.getScheduledDate().isEqual(today))
+        .count();
+    long yesterdayCount = storeVisits.stream()
+        .filter(v -> v.getScheduledDate() != null && v.getScheduledDate().isEqual(today.minusDays(1)))
+        .count();
+
+    double completionRate = totalVisits > 0 ? (completedCount * 100.0) / totalVisits : 0.0;
+
+    Map<LocalDate, Long> visitsPerDay = storeVisits.stream()
+        .filter(v -> v.getScheduledDate() != null)
+        .collect(Collectors.groupingBy(Visit::getScheduledDate, TreeMap::new, Collectors.counting()));
+
+    DateTimeFormatter dayFormatter = DateTimeFormatter.ofPattern("dd/MM");
+    List<String> dailyChartLabels = visitsPerDay.keySet().stream()
+        .map(dayFormatter::format)
+        .collect(Collectors.toList());
+    List<Long> dailyChartValues = new ArrayList<>(visitsPerDay.values());
+
+    List<String> statusChartLabels = Arrays.stream(VisitStatus.values())
+        .map(VisitStatus::getLabel)
+        .collect(Collectors.toList());
+    List<Long> statusChartValues = Arrays.stream(VisitStatus.values())
+        .map(status -> statusCounts.getOrDefault(status, 0L))
+        .collect(Collectors.toList());
+
+    long overduePendingCount = visits.countByStoreAndStatusBefore(store, VisitStatus.PENDING, today);
+    boolean hasOverduePending = overduePendingCount > 0;
+
+    String rawDayFilter = Optional.ofNullable(dayFilter).orElse("todos");
+
+    return new StoreVisitPageData(
+        today,
+        normalizedStart,
+        normalizedEnd,
+        normalizedRange,
+        selectedStatuses,
+        selectedDay,
+        rawDayFilter,
+        storeVisits,
+        totalVisits,
+        completedCount,
+        pendingCount,
+        noShowCount,
+        reopenedCount,
+        cancelledCount,
+        todayCount,
+        yesterdayCount,
+        completionRate,
+        statusChartLabels,
+        statusChartValues,
+        dailyChartLabels,
+        dailyChartValues,
+        hasOverduePending,
+        overduePendingCount
+    );
+  }
+
+  @GetMapping("/exportar")
+  public ResponseEntity<ByteArrayResource> exportar(Authentication authentication,
+                                                    @RequestParam(name = "status", required = false) List<String> statusFilters,
+                                                    @RequestParam(name = "inicio", required = false)
+                                                    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+                                                    @RequestParam(name = "fim", required = false)
+                                                    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+                                                    @RequestParam(name = "dia", required = false) String dayFilter,
+                                                    @RequestParam(name = "range", required = false) String range) throws IOException {
+    User current = users.findByEmail(authentication.getName()).orElseThrow();
+    Store store = current.getStore();
+    if (store == null) {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+    }
+
+    StoreVisitPageData data = prepareStoreVisitData(store, statusFilters, startDate, endDate, dayFilter, range);
+
+    VisitFilterCriteria.Builder builder = VisitFilterCriteria.builder();
+    data.selectedStatuses().forEach(builder::addStatus);
+    if (data.selectedDay() != null) {
+      builder.dayOfWeek(data.selectedDay());
+    }
+    VisitFilterCriteria criteria = builder.build();
+
+    byte[] file = visitExportService.export(data.visits(), data.startDate(), data.endDate(), store, criteria);
+    String baseName = Optional.ofNullable(store.getName()).orElse("loja").replaceAll("[^a-zA-Z0-9]", "_").toLowerCase(Locale.ROOT);
+    String timestamp = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss").format(LocalDateTime.now());
+    String filename = "visitas_" + baseName + "_" + timestamp + ".xlsx";
+
+    return ResponseEntity.ok()
+        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
+        .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+        .contentLength(file.length)
+        .body(new ByteArrayResource(file));
+  }
+
+  private record StoreVisitPageData(LocalDate today,
+                                    LocalDate startDate,
+                                    LocalDate endDate,
+                                    String range,
+                                    Set<VisitStatus> selectedStatuses,
+                                    DayOfWeek selectedDay,
+                                    String rawDayFilter,
+                                    List<Visit> visits,
+                                    long totalVisits,
+                                    long completedCount,
+                                    long pendingCount,
+                                    long noShowCount,
+                                    long reopenedCount,
+                                    long cancelledCount,
+                                    long todayCount,
+                                    long yesterdayCount,
+                                    double completionRate,
+                                    List<String> statusChartLabels,
+                                    List<Long> statusChartValues,
+                                    List<String> dailyChartLabels,
+                                    List<Long> dailyChartValues,
+                                    boolean hasOverduePending,
+                                    long overduePendingCount) {
+  }
+
   @PostMapping("/associar")
   public String associar(@RequestParam Long storeId, Authentication authentication) {
     User current = users.findByEmail(authentication.getName()).orElseThrow();
@@ -235,120 +347,3 @@ public class LojaVisitaController {
     Store store = current.getStore();
     Visit visit = visits.findDetailedById(id)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-
-    // pega o grupo do usuário atual (fallback para LOJA se vier nulo)
-    RoleGroup roleGroup = Optional.ofNullable(current.getRoleGroup()).orElse(RoleGroup.LOJA);
-    boolean isAdminOrSuper = (roleGroup == RoleGroup.ADMIN || roleGroup == RoleGroup.SUPER);
-
-    if (!isAdminOrSuper) {
-      if (store == null) {
-        throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-      }
-      if (!visitBelongsToStore(visit, store)) {
-        throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-      }
-    } else if (store != null && !visitBelongsToStore(visit, store)) {
-      // Admins/Supers podem atualizar qualquer visita, mas se estiverem associados a uma loja diferente,
-      // retornamos 404 para evitar alterações acidentais fora do contexto esperado na tela da loja.
-      throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-    }
-
-    VisitStatus previousStatus = visit.getStatus();
-    visit.setStatus(status);
-
-    boolean commentProvided = request.getParameterMap().containsKey("comment");
-    if (commentProvided) {
-      visit.setComment(StringUtils.hasText(comment) ? comment.trim() : null);
-    }
-
-    boolean ratingProvided = request.getParameterMap().containsKey("rating");
-    if (ratingProvided) {
-      Integer rating = null;
-      if (StringUtils.hasText(ratingInput)) {
-        try {
-          rating = Integer.parseInt(ratingInput.trim());
-        } catch (NumberFormatException ex) {
-          redirectAttributes.addFlashAttribute("errorMessage", "Informe uma nota numérica entre 1 e 5.");
-          return resolveRedirect(target, redirect);
-        }
-        if (rating < 1 || rating > 5) {
-          redirectAttributes.addFlashAttribute("errorMessage", "A nota deve estar entre 1 e 5.");
-          return resolveRedirect(target, redirect);
-        }
-      }
-      visit.setRating(rating);
-    }
-
-    if (previousStatus != status) {
-      visit.setLastStatusUpdatedBy(current);
-      visit.setLastStatusUpdatedAt(Instant.now());
-    }
-
-    visits.save(visit);
-    redirectAttributes.addFlashAttribute("successMessage", "Visita atualizada com sucesso.");
-    return resolveRedirect(target, redirect);
-  }
-
-  private boolean visitBelongsToStore(Visit visit, Store store) {
-    if (visit.getStores() == null || store == null) {
-      return false;
-    }
-    return visit.getStores().stream()
-        .map(Store::getId)
-        .filter(Objects::nonNull)
-        .anyMatch(id -> id.equals(store.getId()));
-  }
-
-  private static Set<VisitStatus> parseStatusFilters(List<String> rawStatuses) {
-    if (rawStatuses == null || rawStatuses.isEmpty()) {
-      return Collections.emptySet();
-    }
-    EnumSet<VisitStatus> statuses = EnumSet.noneOf(VisitStatus.class);
-    for (String raw : rawStatuses) {
-      if (!StringUtils.hasText(raw)) {
-        continue;
-      }
-      try {
-        statuses.add(VisitStatus.valueOf(raw.trim().toUpperCase(Locale.ROOT)));
-      } catch (IllegalArgumentException ignored) {
-        // ignora filtros inválidos
-      }
-    }
-    return statuses;
-  }
-
-  private static DayOfWeek parseDayFilter(String input) {
-    if (input == null || input.isBlank() || "todos".equalsIgnoreCase(input)) {
-      return null;
-    }
-    String normalized = input.trim().toLowerCase(Locale.ROOT);
-    return switch (normalized) {
-      case "segunda" -> DayOfWeek.MONDAY;
-      case "terca", "terça" -> DayOfWeek.TUESDAY;
-      case "quarta" -> DayOfWeek.WEDNESDAY;
-      case "quinta" -> DayOfWeek.THURSDAY;
-      case "sexta" -> DayOfWeek.FRIDAY;
-      case "sabado", "sábado" -> DayOfWeek.SATURDAY;
-      case "domingo" -> DayOfWeek.SUNDAY;
-      default -> null;
-    };
-  }
-
-  private static List<String> buildDayFilterOptions() {
-    return List.of("todos", "segunda", "terca", "quarta", "quinta", "sexta", "sabado", "domingo");
-  }
-
-  private static String buildRedirectSuffix(String redirect) {
-    if (!StringUtils.hasText(redirect)) {
-      return "";
-    }
-    return "?" + redirect;
-  }
-
-  private static String resolveRedirect(String target, String redirect) {
-    if (StringUtils.hasText(target) && "home".equalsIgnoreCase(target.trim())) {
-      return "redirect:/home";
-    }
-    return "redirect:/loja/visitas" + buildRedirectSuffix(redirect);
-  }
-}
