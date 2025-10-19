@@ -386,56 +386,62 @@
 
   <!-- Chart.js -->
   <script th:inline="javascript">
-    const adminStatusLabels = /*[[${adminStatusLabels}]]*/ [];
-    const adminStatusValues = /*[[${adminStatusValues}]]*/ [];
-    const adminDailyLabels = /*[[${adminDailyLabels}]]*/ [];
-    const adminDailyValues = /*[[${adminDailyValues}]]*/ [];
+    window.addEventListener('DOMContentLoaded', () => {
+      const adminStatusLabels = /*[[${adminStatusLabels}]]*/ [];
+      const adminStatusValues = /*[[${adminStatusValues}]]*/ [];
+      const adminDailyLabels = /*[[${adminDailyLabels}]]*/ [];
+      const adminDailyValues = /*[[${adminDailyValues}]]*/ [];
 
-    const adminStatusCtx = document.getElementById('adminStatusChart');
-    if (adminStatusCtx && adminStatusLabels.length > 0) {
-      new Chart(adminStatusCtx, {
-        type: 'doughnut',
-        data: {
-          labels: adminStatusLabels,
-          datasets: [{
-            data: adminStatusValues,
-            backgroundColor: ['#2e7d32', '#ffc107', '#dc3545', '#0dcaf0', '#6c757d']
-          }]
-        },
-        options: {
-          plugins: { legend: { position: 'bottom' } }
-        }
-      });
-    }
+      if (typeof Chart === 'undefined') {
+        return;
+      }
 
-    const adminDailyCtx = document.getElementById('adminDailyChart');
-    if (adminDailyCtx && adminDailyLabels.length > 0) {
-      new Chart(adminDailyCtx, {
-        type: 'line',
-        data: {
-          labels: adminDailyLabels,
-          datasets: [{
-            label: 'Visitas por dia',
-            data: adminDailyValues,
-            borderColor: '#2e7d32',
-            backgroundColor: 'rgba(46,125,50,0.2)',
-            tension: 0.35,
-            fill: true,
-            pointBackgroundColor: '#1b5e20'
-          }]
-        },
-        options: {
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: { precision: 0 }
-            }
+      const adminStatusCtx = document.getElementById('adminStatusChart');
+      if (adminStatusCtx && adminStatusLabels.length > 0) {
+        new Chart(adminStatusCtx, {
+          type: 'doughnut',
+          data: {
+            labels: adminStatusLabels,
+            datasets: [{
+              data: adminStatusValues,
+              backgroundColor: ['#2e7d32', '#ffc107', '#dc3545', '#0dcaf0', '#6c757d']
+            }]
           },
-          plugins: {
-            legend: { display: false }
+          options: {
+            plugins: { legend: { position: 'bottom' } }
           }
-        }
-      });
-    }
+        });
+      }
+
+      const adminDailyCtx = document.getElementById('adminDailyChart');
+      if (adminDailyCtx && adminDailyLabels.length > 0) {
+        new Chart(adminDailyCtx, {
+          type: 'line',
+          data: {
+            labels: adminDailyLabels,
+            datasets: [{
+              label: 'Visitas por dia',
+              data: adminDailyValues,
+              borderColor: '#2e7d32',
+              backgroundColor: 'rgba(46,125,50,0.2)',
+              tension: 0.35,
+              fill: true,
+              pointBackgroundColor: '#1b5e20'
+            }]
+          },
+          options: {
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: { precision: 0 }
+              }
+            },
+            plugins: {
+              legend: { display: false }
+            }
+          }
+        });
+      }
+    });
   </script>
 </html>
