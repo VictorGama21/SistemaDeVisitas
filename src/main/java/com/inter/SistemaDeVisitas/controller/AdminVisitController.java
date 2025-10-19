@@ -202,9 +202,18 @@ public class AdminVisitController {
         List<Store> activeStores = stores.findByActiveTrueOrderByNameAsc();
         FilterContext context = resolveFilterContext(storeId, startDate, endDate, visitStatus, modality, buyerId, supplierId, segmentId, dayFilter);
 
-        List<Visit> loadedVisits = context.hasAnyFilter()
-            ? visitAnalyticsService.loadVisits(context.store(), context.start(), context.end())
-            : visits.findTop10ByOrderByScheduledDateDesc();
+        LocalDate effectiveStart = context.start();
+        LocalDate effectiveEnd = context.end();
+        boolean defaultRangeApplied = false;
+
+        if (!context.hasAnyFilter()) {
+            LocalDate today = LocalDate.now();
+            effectiveStart = today.minusDays(30);
+            effectiveEnd = today.plusDays(30);
+            defaultRangeApplied = true;
+        }
+
+        List<Visit> loadedVisits = visitAnalyticsService.loadVisits(context.store(), effectiveStart, effectiveEnd);
 
         List<Visit> filteredVisits = visitAnalyticsService.applyFilters(loadedVisits, context.criteria());
 
@@ -220,8 +229,8 @@ public class AdminVisitController {
         model.addAttribute("availableStores", activeStores);
         model.addAttribute("visits", pageContent);
         model.addAttribute("selectedStore", context.store());
-        model.addAttribute("startDate", context.start());
-        model.addAttribute("endDate", context.end());
+        model.addAttribute("startDate", effectiveStart);
+        model.addAttribute("endDate", effectiveEnd);
         model.addAttribute("buyers", buyers.findByActiveTrueOrderByNameAsc());
         model.addAttribute("suppliers", suppliers.findByActiveTrueOrderByNameAsc());
         model.addAttribute("segments", segments.findByActiveTrueOrderByNameAsc());
@@ -239,7 +248,7 @@ public class AdminVisitController {
         model.addAttribute("totalPages", totalPages);
         model.addAttribute("totalFilteredVisits", totalVisits);
         model.addAttribute("currentQuery", request.getQueryString() == null ? "" : request.getQueryString());
-        model.addAttribute("filtersApplied", context.hasAnyFilter());
+        model.addAttribute("filtersApplied", context.hasAnyFilter() || defaultRangeApplied);
         return "admin/visitas";
     }
 
