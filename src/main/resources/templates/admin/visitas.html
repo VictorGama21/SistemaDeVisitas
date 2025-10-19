@@ -239,6 +239,13 @@
                       <td th:text="${#temporals.format(visit.scheduledDate, 'dd/MM/yyyy')}">10/06/2024</td>
                       <td th:text="${visit.modality != null ? visit.modality.label : '-'}">Promotoria - Reposição</td>
                       <td th:text="${visit.buyer != null ? visit.buyer.name : '-'}">-</td>
+                      <td th:text="${visit.supplier != null ? visit.supplier.name : '-'}">-</td>
+                      <td th:text="${visit.segment != null ? visit.segment.name : '-'}">-</td>
+                      <td>
+                        <span class="badge"
+                              th:classappend="${visit.status != null} ? ' ' + visit.status.badgeClass : ' text-bg-secondary'"
+                              th:text="${visit.status != null ? visit.status.label : '-'}">-</span>
+                      </td>
                       <td th:text="${visit.commercialInfo} ?: '-'">-</td>
                       <td th:text="${visit.comment} ?: '-'">-</td>
                       <td>
@@ -264,7 +271,6 @@
                   </tbody>
                 </table>
               </div>
-
               <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2 mt-3">
                 <form method="get" class="d-inline-flex gap-2">
                   <input type="hidden" name="page" th:value="${currentPage - 1}">
