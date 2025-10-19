@@ -347,3 +347,98 @@ public class LojaVisitaController {
     Store store = current.getStore();
     Visit visit = visits.findDetailedById(id)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+    if (store == null) {
+      redirectAttributes.addFlashAttribute("errorMessage", "Nenhuma loja associada ao seu usuário.");
+      return buildRedirectUrl(redirect, target);
+    }
+
+    boolean visitBelongsToStore = visit.getStores().stream()
+        .anyMatch(s -> Objects.equals(s.getId(), store.getId()));
+    if (!visitBelongsToStore) {
+      redirectAttributes.addFlashAttribute("errorMessage", "Você não tem permissão para alterar esta visita.");
+      return buildRedirectUrl(redirect, target);
+    }
+
+    Integer rating = null;
+    if (StringUtils.hasText(ratingInput)) {
+      try {
+        rating = Integer.parseInt(ratingInput.trim());
+      } catch (NumberFormatException ex) {
+        redirectAttributes.addFlashAttribute("errorMessage", "Informe uma nota numérica entre 1 e 5.");
+        return buildRedirectUrl(redirect, target);
+      }
+      if (rating < 1 || rating > 5) {
+        redirectAttributes.addFlashAttribute("errorMessage", "A nota deve estar entre 1 e 5.");
+        return buildRedirectUrl(redirect, target);
+      }
+    }
+
+    VisitStatus previousStatus = visit.getStatus();
+    visit.setStatus(status);
+    visit.setComment(StringUtils.hasText(comment) ? comment.trim() : null);
+    visit.setRating(rating);
+
+    if (previousStatus != status) {
+      visit.setLastStatusUpdatedBy(current);
+      visit.setLastStatusUpdatedAt(Instant.now());
+    }
+
+    visits.save(visit);
+
+    redirectAttributes.addFlashAttribute("successMessage", "Visita atualizada com sucesso.");
+    return buildRedirectUrl(redirect, target);
+  }
+
+  private String buildRedirectUrl(String redirect, String target) {
+    StringBuilder url = new StringBuilder("redirect:/loja/visitas");
+    if (StringUtils.hasText(redirect)) {
+      url.append("?").append(redirect.trim());
+    }
+    if (StringUtils.hasText(target)) {
+      String normalized = target.startsWith("#") ? target : "#" + target;
+      url.append(normalized);
+    }
+    return url.toString();
+  }
+
+  private Set<VisitStatus> parseStatusFilters(List<String> statusFilters) {
+    if (statusFilters == null || statusFilters.isEmpty()) {
+      return Collections.emptySet();
+    }
+    EnumSet<VisitStatus> statuses = EnumSet.noneOf(VisitStatus.class);
+    for (String value : statusFilters) {
+      if (!StringUtils.hasText(value)) {
+        continue;
+      }
+      try {
+        statuses.add(VisitStatus.valueOf(value.trim().toUpperCase(Locale.ROOT)));
+      } catch (IllegalArgumentException ignored) {
+        // Ignora valores inválidos
+      }
+    }
+    return statuses;
+  }
+
+  private DayOfWeek parseDayFilter(String input) {
+    if (input == null || input.isBlank() || "todos".equalsIgnoreCase(input) || "todas".equalsIgnoreCase(input)) {
+      return null;
+    }
+    String normalized = input.trim().toLowerCase(Locale.ROOT);
+    return switch (normalized) {
+      case "segunda" -> DayOfWeek.MONDAY;
+      case "terca", "terça" -> DayOfWeek.TUESDAY;
+      case "quarta" -> DayOfWeek.WEDNESDAY;
+      case "quinta" -> DayOfWeek.THURSDAY;
+      case "sexta" -> DayOfWeek.FRIDAY;
+      case "sabado", "sábado" -> DayOfWeek.SATURDAY;
+      case "domingo" -> DayOfWeek.SUNDAY;
+      default -> null;
+    };
+  }
+
+  private List<String> buildDayFilterOptions() {
+    return List.of("todos", "segunda", "terca", "quarta", "quinta", "sexta", "sabado", "domingo");
+  }
+}
+
