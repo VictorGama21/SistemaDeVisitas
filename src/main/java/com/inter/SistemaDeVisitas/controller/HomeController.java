@@ -109,16 +109,6 @@ public class HomeController {
       visitasHoje = visitRepository.countByScheduledDateBetween(today, today);
       clientesAtivos = userRepository.countByRoleGroupAndEnabledTrue(RoleGroup.LOJA);
 
-      String filter = Optional.ofNullable(storeStatusFilter)
-          .map(String::trim)
-          .filter(s -> !s.isEmpty())
-          .orElse("ativos");
-      List<Store> stores = switch (filter) {
-        case "inativos" -> storeRepository.findByActiveFalseOrderByNameAsc();
-        case "todos" -> storeRepository.findAllByOrderByNameAsc();
-        default -> storeRepository.findByActiveTrueOrderByNameAsc();
-      };
-
       Store selectedStore = null;
       if (storeId != null) {
         selectedStore = storeRepository.findById(storeId).orElse(null);
@@ -155,47 +145,15 @@ public class HomeController {
 
       model.addAttribute("storeSelection", storeRepository.findByActiveTrueOrderByNameAsc());
       DayOfWeek selectedDay = parseDayFilter(dayFilter);
-      List<Visit> upcomingVisits = visitRepository.findTop20ByScheduledDateGreaterThanEqualOrderByScheduledDateAsc(today);
-      if (selectedDay != null) {
-        upcomingVisits = upcomingVisits.stream()
-            .filter(v -> v.getScheduledDate() != null && v.getScheduledDate().getDayOfWeek() == selectedDay)
-            .collect(Collectors.toList());
-      }
-      VisitFilterCriteria upcomingCriteria = VisitFilterCriteria.builder()
-          .addStatus(parseVisitStatus(visitStatus))
-          .addModality(parseVisitModality(modality))
-          .buyerId(buyerId)
-          .supplierId(supplierId)
-          .segmentId(segmentId)
-          .build();
-      if (criteria.hasStatusFilter() || criteria.hasModalityFilter()
-          || criteria.hasBuyerFilter() || criteria.hasSupplierFilter() || criteria.hasSegmentFilter()) {
-        upcomingVisits = new ArrayList<>(visitAnalyticsService.applyFilters(upcomingVisits, upcomingCriteria));
-        upcomingVisits.sort(Comparator.comparing(Visit::getScheduledDate, Comparator.nullsLast(Comparator.naturalOrder()))
-            .thenComparing(Visit::getId));
-      }
-
-      model.addAttribute("storeFilter", filter);
-      model.addAttribute("stores", stores);
-      model.addAttribute("totalStoresAtivas", storeRepository.countByActiveTrue());
       model.addAttribute("showAdminShortcuts", true);
       model.addAttribute("dayFilter", selectedDay != null ? selectedDay.getDisplayName(TextStyle.FULL, new Locale("pt", "BR")) : "Todas");
       model.addAttribute("rawDayFilter", Optional.ofNullable(dayFilter).orElse("todas"));
       model.addAttribute("availableDays", buildDayFilterOptions());
       model.addAttribute("statusOptions", VisitStatus.values());
-      model.addAttribute("modalities", VisitModality.values());
-      model.addAttribute("upcomingVisits", upcomingVisits);
       model.addAttribute("adminSelectedStore", selectedStore);
       model.addAttribute("adminStartDate", defaultStart);
       model.addAttribute("adminEndDate", defaultEnd);
       model.addAttribute("adminSelectedStatus", visitStatus);
-      model.addAttribute("adminSelectedModality", modality);
-      model.addAttribute("adminSelectedBuyerId", buyerId);
-      model.addAttribute("adminSelectedSupplierId", supplierId);
-      model.addAttribute("adminSelectedSegmentId", segmentId);
-      model.addAttribute("buyers", buyerRepository.findByActiveTrueOrderByNameAsc());
-      model.addAttribute("suppliers", supplierRepository.findByActiveTrueOrderByNameAsc());
-      model.addAttribute("segments", segmentRepository.findByActiveTrueOrderByNameAsc());
       model.addAttribute("adminStatusLabels", adminStatusLabels);
       model.addAttribute("adminStatusValues", adminStatusValues);
       model.addAttribute("adminDailyLabels", adminDailyLabels);
