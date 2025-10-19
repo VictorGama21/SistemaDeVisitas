@@ -72,7 +72,7 @@
           </div>
           <div class="col-sm-6 col-lg-3">
             <div class="card shadow-sm h-100">
-              <div class="card-body">
+   <div class="card-body">
                 <div class="small text-muted">Taxa de presença</div>
                 <div class="fs-3 fw-semibold" th:text="${#numbers.formatDecimal(completionRate, 1, 1)} + '%'">0%</div>
                 <div class="progress mt-2" style="height:6px;">
@@ -97,7 +97,15 @@
                 <h5 class="card-title mb-0">Filtros dinâmicos</h5>
                 <p class="text-muted small mb-0">Combine status, período e dia da semana para encontrar visitas específicas.</p>
               </div>
-              <div class="d-flex flex-wrap gap-2">
+              <div class="d-flex flex-wrap gap-2 align-items-center">
+                <form th:action="@{/loja/visitas/exportar}" method="get" class="d-inline-flex gap-2">
+                  <input type="hidden" name="inicio" th:value="${startDate}">
+                  <input type="hidden" name="fim" th:value="${endDate}">
+                  <input type="hidden" name="dia" th:value="${rawDayFilter}">
+                  <input type="hidden" name="range" th:value="${range}">
+                  <input type="hidden" th:each="status : ${selectedStatuses}" name="status" th:value="${status.name()}">
+                  <button type="submit" class="btn btn-outline-success btn-sm">Exportar XLSX</button>
+                </form>
                 <button type="submit" form="visitsFilters" name="range" value="hoje" class="btn btn-outline-success btn-sm"
                         th:classappend="${range == 'hoje'} ? ' active'">Hoje</button>
                 <button type="submit" form="visitsFilters" name="range" value="ontem" class="btn btn-outline-success btn-sm"
