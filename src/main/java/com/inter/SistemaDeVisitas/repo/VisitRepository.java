@@ -10,14 +10,11 @@ import org.springframework.data.repository.query.Param;
 
 
 
- import java.time.LocalDate;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
 public interface VisitRepository extends JpaRepository<Visit, Long> {
-  @EntityGraph(attributePaths = {"stores", "buyer", "supplier", "segment", "lastStatusUpdatedBy"})
-  @Query("select distinct v from Visit v join v.stores s where s = :store order by v.scheduledDate desc")
-  List<Visit> findByStoreOrderByScheduledDateDesc(@Param("store") Store store);
   @EntityGraph(attributePaths = {"stores", "buyer", "supplier", "segment", "lastStatusUpdatedBy"})
   Optional<Visit> findDetailedById(Long id);
 
