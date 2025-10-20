@@ -77,7 +77,8 @@ public class LojaVisitaController {
     model.addAttribute("roleGroup", roleGroup);
 
     if (store != null) {
-      StoreVisitPageData data = prepareStoreVisitData(store, statusFilters, startDate, endDate, dayFilter, range);
+      String effectiveRange = request.getParameterMap().containsKey("range") ? range : null;
+      StoreVisitPageData data = prepareStoreVisitData(store, statusFilters, startDate, endDate, dayFilter, effectiveRange);
       model.addAttribute("visits", data.visits());
       model.addAttribute("selectedStatuses", data.selectedStatuses());
       model.addAttribute("selectedDay", data.selectedDay() != null
@@ -276,7 +277,8 @@ public class LojaVisitaController {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND);
     }
 
-    StoreVisitPageData data = prepareStoreVisitData(store, statusFilters, startDate, endDate, dayFilter, range);
+    String effectiveRange = StringUtils.hasText(range) ? range : null;
+    StoreVisitPageData data = prepareStoreVisitData(store, statusFilters, startDate, endDate, dayFilter, effectiveRange);
 
     VisitFilterCriteria.Builder builder = VisitFilterCriteria.builder();
     data.selectedStatuses().forEach(builder::addStatus);
