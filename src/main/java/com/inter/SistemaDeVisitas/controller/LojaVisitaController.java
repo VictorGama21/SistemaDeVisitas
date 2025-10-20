@@ -11,24 +11,19 @@ import com.inter.SistemaDeVisitas.repo.VisitRepository;
 import com.inter.SistemaDeVisitas.service.VisitAnalyticsService;
 import com.inter.SistemaDeVisitas.service.VisitExportService;
 import com.inter.SistemaDeVisitas.service.VisitFilterCriteria;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.io.ByteArrayResource;
-import org.springframework.format.annotation.DateTimeFormat;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.io.IOException;
 import java.time.DayOfWeek;
@@ -37,17 +32,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.EnumMap;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.NavigableMap;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Controller
@@ -72,6 +57,7 @@ public class LojaVisitaController {
     this.visitExportService = visitExportService;
   }
 
+  // LISTAGEM
   @GetMapping
   public String listar(Model model,
                        Authentication authentication,
@@ -138,31 +124,137 @@ public class LojaVisitaController {
       model.addAttribute("noShowCount", 0);
       model.addAttribute("reopenedCount", 0);
       model.addAttribute("cancelledCount", 0);
-      model.addAttribute("completionRate", 0.0);
+      model.addAttribute("completionRate", 0);
       model.addAttribute("todayCount", 0);
       model.addAttribute("yesterdayCount", 0);
       model.addAttribute("statusChartLabels", Arrays.stream(VisitStatus.values())
-          .map(VisitStatus::getLabel)
-          .collect(Collectors.toList()));
+          .map(VisitStatus::getLabel).collect(Collectors.toList()));
       model.addAttribute("statusChartValues", Arrays.stream(VisitStatus.values())
-          .map(status -> 0L)
-          .collect(Collectors.toList()));
+          .map(s -> 0L).collect(Collectors.toList()));
       model.addAttribute("dailyChartLabels", Collections.emptyList());
       model.addAttribute("dailyChartValues", Collections.emptyList());
-      model.addAttribute("hasOverduePending", false);
-      model.addAttribute("overduePendingCount", 0L);
-      model.addAttribute("today", LocalDate.now());
     }
 
-    return "loja/visitas";
+    return "loja/visitas/lista";
   }
 
+  // EXPORTAÇÃO
+  @GetMapping("/exportar")
+  public ResponseEntity<ByteArrayResource> exportar(Authentication authentication,
+                                                    @RequestParam(name = "status", required = false) List<String> statusFilters,
+                                                    @RequestParam(name = "inicio", required = false)
+                                                    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+                                                    @RequestParam(name = "fim", required = false)
+                                                    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+                                                    @RequestParam(name = "dia", required = false) String dayFilter,
+                                                    @RequestParam(name = "range", required = false) String range) throws IOException {
+    User current = users.findByEmail(authentication.getName()).orElseThrow();
+    Store store = current.getStore();
+    if (store == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+
+    String effectiveRange = StringUtils.hasText(range) ? range : null;
+    StoreVisitPageData data = prepareStoreVisitData(store, statusFilters, startDate, endDate, dayFilter, effectiveRange);
+
+    byte[] file = visitExportService.export(data.visits(), data.startDate(), data.endDate(), store, data.criteria());
+    String baseName = Optional.ofNullable(store.getName()).orElse("loja")
+        .replaceAll("[^a-zA-Z0-9]", "_").toLowerCase(Locale.ROOT);
+    String timestamp = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss").format(LocalDateTime.now());
+    String filename = "visitas_" + baseName + "_" + timestamp + ".xlsx";
+
+    return ResponseEntity.ok()
+        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
+        .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+        .contentLength(file.length)
+        .body(new ByteArrayResource(file));
+  }
+
+  // ASSOCIAR LOJA AO USUÁRIO
+  @PostMapping("/associar")
+  public String associar(@RequestParam Long storeId, Authentication authentication) {
+    User current = users.findByEmail(authentication.getName()).orElseThrow();
+    Store store = stores.findById(storeId)
+        .filter(Store::isActive)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+    current.setStore(store);
+    users.save(current);
+    return "redirect:/loja/visitas";
+  }
+
+  // ATUALIZAR STATUS
+  @PostMapping("/{id}/status")
+  public String atualizarStatus(@PathVariable Long id,
+                                @RequestParam VisitStatus status,
+                                @RequestParam(name = "comment", required = false) String comment,
+                                @RequestParam(name = "rating", required = false) String ratingInput,
+                                @RequestParam(name = "redirect", required = false) String redirect,
+                                @RequestParam(name = "target", required = false) String target,
+                                Authentication authentication,
+                                RedirectAttributes redirectAttributes) {
+    User current = users.findByEmail(authentication.getName()).orElseThrow();
+    Store store = current.getStore();
+
+    Visit visit = visits.findDetailedById(id)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+    if (store == null) {
+      redirectAttributes.addFlashAttribute("errorMessage", "Nenhuma loja associada ao seu usuário.");
+      return buildRedirectUrl(redirect, target);
+    }
+
+    // Ajuste para getStore() se o relacionamento for 1:N
+    boolean visitBelongsToStore = visit.getStores().stream()
+        .anyMatch(s -> Objects.equals(s.getId(), store.getId()));
+    if (!visitBelongsToStore) {
+      redirectAttributes.addFlashAttribute("errorMessage", "Você não tem permissão para alterar esta visita.");
+      return buildRedirectUrl(redirect, target);
+    }
+
+    Integer rating = null;
+    if (StringUtils.hasText(ratingInput)) {
+      try {
+        rating = Integer.parseInt(ratingInput.trim());
+      } catch (NumberFormatException ex) {
+        redirectAttributes.addFlashAttribute("errorMessage", "Informe uma nota numérica entre 1 e 5.");
+        return buildRedirectUrl(redirect, target);
+      }
+      if (rating < 1 || rating > 5) {
+        redirectAttributes.addFlashAttribute("errorMessage", "A nota deve estar entre 1 e 5.");
+        return buildRedirectUrl(redirect, target);
+      }
+    }
+
+    VisitStatus previousStatus = visit.getStatus();
+    String previousComment = visit.getComment();
+    Integer previousRating = visit.getRating();
+    String normalizedComment = StringUtils.hasText(comment) ? comment.trim() : null;
+
+    visit.setStatus(status);
+    visit.setComment(normalizedComment);
+    visit.setRating(rating);
+
+    boolean statusChanged = previousStatus != status;
+    boolean feedbackChanged = !Objects.equals(previousComment, normalizedComment)
+        || !Objects.equals(previousRating, rating);
+
+    if (statusChanged || feedbackChanged) {
+      visit.setLastStatusUpdatedBy(current);
+      visit.setLastStatusUpdatedAt(Instant.now());
+    }
+
+    visits.save(visit);
+
+    redirectAttributes.addFlashAttribute("successMessage", "Visita atualizada com sucesso.");
+    return buildRedirectUrl(redirect, target);
+  }
+
+  // ===== Helpers =====
+
   private StoreVisitPageData prepareStoreVisitData(Store store,
-                                                  List<String> statusFilters,
-                                                  LocalDate startDate,
-                                                  LocalDate endDate,
-                                                  String dayFilter,
-                                                  String range) {
+                                                   List<String> statusFilters,
+                                                   LocalDate startDate,
+                                                   LocalDate endDate,
+                                                   String dayFilter,
+                                                   String range) {
     LocalDate today = LocalDate.now();
     LocalDate normalizedStart = startDate;
     LocalDate normalizedEnd = endDate;
@@ -184,12 +276,9 @@ public class LojaVisitaController {
 
     Set<VisitStatus> selectedStatuses = parseStatusFilters(statusFilters);
     DayOfWeek selectedDay = parseDayFilter(dayFilter);
-
     VisitFilterCriteria.Builder criteriaBuilder = VisitFilterCriteria.builder();
     selectedStatuses.forEach(criteriaBuilder::addStatus);
-    if (selectedDay != null) {
-      criteriaBuilder.dayOfWeek(selectedDay);
-    }
+    if (selectedDay != null) criteriaBuilder.dayOfWeek(selectedDay);
     VisitFilterCriteria criteria = criteriaBuilder.build();
 
     List<Visit> loadedVisits = visitAnalytics.loadVisits(store, normalizedStart, normalizedEnd);
@@ -214,18 +303,16 @@ public class LojaVisitaController {
     double completionRate = totalVisits > 0 ? (completedCount * 100.0) / totalVisits : 0.0;
 
     NavigableMap<LocalDate, Long> visitsPerDay = visitAnalytics.summarizeDaily(storeVisits);
+
     DateTimeFormatter dayFormatter = DateTimeFormatter.ofPattern("dd/MM");
     List<String> dailyChartLabels = visitsPerDay.keySet().stream()
-        .map(dayFormatter::format)
-        .collect(Collectors.toList());
+        .map(dayFormatter::format).collect(Collectors.toList());
     List<Long> dailyChartValues = new ArrayList<>(visitsPerDay.values());
 
     List<String> statusChartLabels = Arrays.stream(VisitStatus.values())
-        .map(VisitStatus::getLabel)
-        .collect(Collectors.toList());
+        .map(VisitStatus::getLabel).collect(Collectors.toList());
     List<Long> statusChartValues = Arrays.stream(VisitStatus.values())
-        .map(status -> statusCounts.getOrDefault(status, 0L))
-        .collect(Collectors.toList());
+        .map(s -> statusCounts.getOrDefault(s, 0L)).collect(Collectors.toList());
 
     long overduePendingCount = visits.countByStoreAndStatusBefore(store, VisitStatus.PENDING, today);
     boolean hasOverduePending = overduePendingCount > 0;
@@ -233,50 +320,59 @@ public class LojaVisitaController {
     String rawDayFilter = Optional.ofNullable(dayFilter).orElse("todos");
 
     return new StoreVisitPageData(
-        today,
-        normalizedStart,
-        normalizedEnd,
-        normalizedRange,
-        selectedStatuses,
-        selectedDay,
-public class LojaVisitaController {
-        dailyChartLabels,
-        dailyChartValues,
-        hasOverduePending,
-        overduePendingCount,
-        criteria
+        today, normalizedStart, normalizedEnd, normalizedRange,
+        selectedStatuses, selectedDay, rawDayFilter,
+        storeVisits, totalVisits, completedCount, pendingCount, noShowCount,
+        reopenedCount, cancelledCount, todayCount, yesterdayCount, completionRate,
+        statusChartLabels, statusChartValues, dailyChartLabels, dailyChartValues,
+        hasOverduePending, overduePendingCount, criteria
     );
   }
 
-  @GetMapping("/exportar")
-  public ResponseEntity<ByteArrayResource> exportar(Authentication authentication,
-                                                    @RequestParam(name = "status", required = false) List<String> statusFilters,
-                                                    @RequestParam(name = "inicio", required = false)
-                                                    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-                                                    @RequestParam(name = "fim", required = false)
-                                                    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-                                                    @RequestParam(name = "dia", required = false) String dayFilter,
-                                                    @RequestParam(name = "range", required = false) String range) throws IOException {
-    User current = users.findByEmail(authentication.getName()).orElseThrow();
-    Store store = current.getStore();
-    if (store == null) {
-      throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+  private String buildRedirectUrl(String redirect, String target) {
+    StringBuilder url = new StringBuilder("redirect:/loja/visitas");
+    if (StringUtils.hasText(redirect)) {
+      url.append("?").append(redirect.trim());
     }
+    if (StringUtils.hasText(target)) {
+      String normalized = target.startsWith("#") ? target : "#" + target;
+      url.append(normalized);
+    }
+    return url.toString();
+  }
 
-    String effectiveRange = StringUtils.hasText(range) ? range : null;
-    StoreVisitPageData data = prepareStoreVisitData(store, statusFilters, startDate, endDate, dayFilter, effectiveRange);
-    VisitFilterCriteria criteria = data.criteria();
+  private Set<VisitStatus> parseStatusFilters(List<String> statusFilters) {
+    if (statusFilters == null || statusFilters.isEmpty()) return Collections.emptySet();
+    EnumSet<VisitStatus> statuses = EnumSet.noneOf(VisitStatus.class);
+    for (String value : statusFilters) {
+      if (!StringUtils.hasText(value)) continue;
+      try {
+        statuses.add(VisitStatus.valueOf(value.trim().toUpperCase(Locale.ROOT)));
+      } catch (IllegalArgumentException ignored) { }
+    }
+    return statuses;
+  }
 
-    byte[] file = visitExportService.export(data.visits(), data.startDate(), data.endDate(), store, criteria);
-    String baseName = Optional.ofNullable(store.getName()).orElse("loja").replaceAll("[^a-zA-Z0-9]", "_").toLowerCase(Locale.ROOT);
-    String timestamp = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss").format(LocalDateTime.now());
-    String filename = "visitas_" + baseName + "_" + timestamp + ".xlsx";
+  private DayOfWeek parseDayFilter(String input) {
+    if (input == null || input.isBlank()
+        || "todos".equalsIgnoreCase(input) || "todas".equalsIgnoreCase(input)) {
+      return null;
+    }
+    String normalized = input.trim().toLowerCase(Locale.ROOT);
+    return switch (normalized) {
+      case "segunda" -> DayOfWeek.MONDAY;
+      case "terca", "terça" -> DayOfWeek.TUESDAY;
+      case "quarta" -> DayOfWeek.WEDNESDAY;
+      case "quinta" -> DayOfWeek.THURSDAY;
+      case "sexta" -> DayOfWeek.FRIDAY;
+      case "sabado", "sábado" -> DayOfWeek.SATURDAY;
+      case "domingo" -> DayOfWeek.SUNDAY;
+      default -> null;
+    };
+  }
 
-    return ResponseEntity.ok()
-        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
-        .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
-        .contentLength(file.length)
-        .body(new ByteArrayResource(file));
+  private List<String> buildDayFilterOptions() {
+    return List.of("todos", "segunda", "terca", "quarta", "quinta", "sexta", "sabado", "domingo");
   }
 
   private record StoreVisitPageData(LocalDate today,
@@ -302,67 +398,5 @@ public class LojaVisitaController {
                                     List<Long> dailyChartValues,
                                     boolean hasOverduePending,
                                     long overduePendingCount,
-                                    VisitFilterCriteria criteria) {
-    private StoreVisitPageData {
-      range = range == null ? "" : range;
-      selectedStatuses = selectedStatuses == null || selectedStatuses.isEmpty()
-          ? Set.of()
-          : Collections.unmodifiableSet(EnumSet.copyOf(selectedStatuses));
-      rawDayFilter = rawDayFilter == null ? "todos" : rawDayFilter;
-      visits = visits == null ? List.of() : List.copyOf(visits);
-      statusChartLabels = statusChartLabels == null ? List.of() : List.copyOf(statusChartLabels);
-      statusChartValues = statusChartValues == null ? List.of() : List.copyOf(statusChartValues);
-      dailyChartLabels = dailyChartLabels == null ? List.of() : List.copyOf(dailyChartLabels);
-      dailyChartValues = dailyChartValues == null ? List.of() : List.copyOf(dailyChartValues);
-    }
-  }
-
-  @PostMapping("/associar")
-  public String associar(@RequestParam Long storeId, Authentication authentication) {
-    User current = users.findByEmail(authentication.getName()).orElseThrow();
-    Store store = stores.findById(storeId)
-        .filter(Store::isActive)
-        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-    current.setStore(store);
-    users.save(current);
-    return "redirect:/loja/visitas";
-  }
-
-  @PostMapping("/{id}/status")
-  public String atualizarStatus(@PathVariable Long id,
-                                @RequestParam VisitStatus status,
-                                @RequestParam(name = "comment", required = false) String comment,
-                                @RequestParam(name = "rating", required = false) String ratingInput,
-                                @RequestParam(name = "redirect", required = false) String redirect,
-                                @RequestParam(name = "target", required = false) String target,
-                                Authentication authentication,
-                                HttpServletRequest request,
-                                RedirectAttributes redirectAttributes) {
-    User current = users.findByEmail(authentication.getName()).orElseThrow();
-    Store store = current.getStore();
-public class LojaVisitaController {
-    }
-    return statuses;
-  }
-
-  private DayOfWeek parseDayFilter(String input) {
-    if (input == null || input.isBlank() || "todos".equalsIgnoreCase(input) || "todas".equalsIgnoreCase(input)) {
-      return null;
-    }
-    String normalized = input.trim().toLowerCase(Locale.ROOT);
-    return switch (normalized) {
-      case "segunda" -> DayOfWeek.MONDAY;
-      case "terca", "terça" -> DayOfWeek.TUESDAY;
-      case "quarta" -> DayOfWeek.WEDNESDAY;
-      case "quinta" -> DayOfWeek.THURSDAY;
-      case "sexta" -> DayOfWeek.FRIDAY;
-      case "sabado", "sábado" -> DayOfWeek.SATURDAY;
-      case "domingo" -> DayOfWeek.SUNDAY;
-      default -> null;
-    };
-  }
-
-  private List<String> buildDayFilterOptions() {
-    return List.of("todos", "segunda", "terca", "quarta", "quinta", "sexta", "sabado", "domingo");
-  }
+                                    VisitFilterCriteria criteria) { }
 }
