@@ -1,8 +1,3 @@
-package com.inter.SistemaDeVisitas.service;
-
-import com.inter.SistemaDeVisitas.entity.Store;
-import com.inter.SistemaDeVisitas.entity.Visit;
-import com.inter.SistemaDeVisitas.entity.VisitModality;
 import com.inter.SistemaDeVisitas.entity.VisitStatus;
 import com.inter.SistemaDeVisitas.repo.VisitRepository;
 import org.springframework.stereotype.Service;
@@ -28,7 +23,42 @@ public class VisitAnalyticsService {
   }
 
   public List<Visit> loadVisits(Store store, LocalDate start, LocalDate end) {
-    return visitRepository.findByStoreAndDateRange(store, start, end);
+    List<Visit> loaded;
+
+    if (store != null && start == null && end == null) {
+      loaded = new ArrayList<>(visitRepository.findByStoreOrderByScheduledDateAsc(store));
+    } else {
+      loaded = new ArrayList<>(visitRepository.findByStoreAndDateRange(store, start, end));
+    }
+
+    if (loaded.isEmpty()) {
+      return List.of();
+    }
+
+    LocalDate effectiveStart = start;
+    LocalDate effectiveEnd = end;
+
+    if (effectiveStart == null && effectiveEnd == null) {
+      return loaded;
+    }
+
+    List<Visit> filteredByDate = new ArrayList<>(loaded.size());
+    for (Visit visit : loaded) {
+      LocalDate scheduled = visit.getScheduledDate();
+      if (scheduled == null) {
+        filteredByDate.add(visit);
+        continue;
+      }
+      if (effectiveStart != null && scheduled.isBefore(effectiveStart)) {
+        continue;
+      }
+      if (effectiveEnd != null && scheduled.isAfter(effectiveEnd)) {
+        continue;
+      }
+      filteredByDate.add(visit);
+    }
+
+    return filteredByDate;
   }
 
   public List<Visit> applyFilters(List<Visit> visits, VisitFilterCriteria criteria) {
@@ -81,7 +111,7 @@ public class VisitAnalyticsService {
     return summary;
   }
 
-  public NavigableMap<LocalDate, Long> summarizeDaily(List<Visit> visits) {
+  public NavigaMap<LocalDate, Long> summarizeDaily(List<Visit> visits) {
     NavigableMap<LocalDate, Long> summary = new TreeMap<>();
     if (visits == null) {
       return summary;
