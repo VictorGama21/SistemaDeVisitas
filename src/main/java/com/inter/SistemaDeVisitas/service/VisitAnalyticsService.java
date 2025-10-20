@@ -1,8 +1,3 @@
-package com.inter.SistemaDeVisitas.service;
-
-import com.inter.SistemaDeVisitas.entity.Store;
-import com.inter.SistemaDeVisitas.entity.Visit;
-import com.inter.SistemaDeVisitas.entity.VisitModality;
 import com.inter.SistemaDeVisitas.entity.VisitStatus;
 import com.inter.SistemaDeVisitas.repo.VisitRepository;
 import org.springframework.stereotype.Service;
@@ -29,6 +24,7 @@ public class VisitAnalyticsService {
 
   public List<Visit> loadVisits(Store store, LocalDate start, LocalDate end) {
     List<Visit> loaded;
+
     if (store != null && start == null && end == null) {
       loaded = new ArrayList<>(visitRepository.findByStoreOrderByScheduledDateAsc(store));
     } else {
@@ -70,33 +66,30 @@ public class VisitAnalyticsService {
       return List.of();
     }
 
-    VisitFilterCriteria effectiveCriteria = criteria != null ? criteria : VisitFilterCriteria.builder().build();
-
     List<Visit> filtered = new ArrayList<>();
     for (Visit visit : visits) {
-      if (!matchesStatus(effectiveCriteria.getStatuses(), visit.getStatus())) {
+      if (!matchesStatus(criteria.getStatuses(), visit.getStatus())) {
         continue;
       }
-      if (!matchesModality(effectiveCriteria.getModalities(), visit.getModality())) {
+      if (!matchesModality(criteria.getModalities(), visit.getModality())) {
         continue;
       }
-      if (!matchesBuyer(effectiveCriteria.getBuyerId(), visit)) {
+      if (!matchesBuyer(criteria.getBuyerId(), visit)) {
         continue;
       }
-      if (!matchesSupplier(effectiveCriteria.getSupplierId(), visit)) {
+      if (!matchesSupplier(criteria.getSupplierId(), visit)) {
         continue;
       }
-      if (!matchesSegment(effectiveCriteria.getSegmentId(), visit)) {
+      if (!matchesSegment(criteria.getSegmentId(), visit)) {
         continue;
       }
-      if (!matchesDay(effectiveCriteria.getDayOfWeek(), visit.getScheduledDate())) {
+      if (!matchesDay(criteria.getDayOfWeek(), visit.getScheduledDate())) {
         continue;
       }
       filtered.add(visit);
     }
 
-    filtered.sort(Comparator
-        .comparing(Visit::getScheduledDate, Comparator.nullsLast(Comparator.naturalOrder())).reversed()
+    filtered.sort(Comparator.comparing(Visit::getScheduledDate, Comparator.nullsLast(Comparator.naturalOrder())).reversed()
         .thenComparing(Visit::getId, Comparator.nullsLast(Comparator.reverseOrder())));
     return filtered;
   }
@@ -118,7 +111,7 @@ public class VisitAnalyticsService {
     return summary;
   }
 
-  public NavigableMap<LocalDate, Long> summarizeDaily(List<Visit> visits) {
+  public NavigaMap<LocalDate, Long> summarizeDaily(List<Visit> visits) {
     NavigableMap<LocalDate, Long> summary = new TreeMap<>();
     if (visits == null) {
       return summary;
