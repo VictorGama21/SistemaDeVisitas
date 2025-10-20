@@ -110,7 +110,7 @@ public class LojaVisitaController {
       model.addAttribute("hasOverduePending", data.hasOverduePending());
       model.addAttribute("overduePendingCount", data.overduePendingCount());
       model.addAttribute("today", data.today());
-@@ -138,210 +143,184 @@ public class LojaVisitaController {
+public class LojaVisitaController {
   private StoreVisitPageData prepareStoreVisitData(Store store,
                                                   List<String> statusFilters,
                                                   LocalDate startDate,
