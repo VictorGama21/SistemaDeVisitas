@@ -63,7 +63,7 @@ public interface VisitRepository extends JpaRepository<Visit, Long> {
       where (:store is null or s = :store)
         and v.scheduledDate >= coalesce(:start, v.scheduledDate)
         and v.scheduledDate <= coalesce(:end, v.scheduledDate)
-      order by v.scheduledDate desc
+      order by v.scheduledDate desc, v.id desc
       """)
   List<Visit> findByStoreAndDateRange(@Param("store") Store store,
                                       @Param("start") LocalDate start,
