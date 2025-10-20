@@ -113,7 +113,7 @@
                 <a class="btn btn-link btn-sm" th:href="@{/loja/visitas}">Limpar filtros</a>
               </div>
             </div>
-            <form id="visitsFilters" method="get" class="row g-3 align-items-end">
+            <form id="visitsFilters" method="get" th:action="@{/loja/visitas}" class="row g-3 align-items-end">
               <div class="col-12 col-lg-5">
                 <label class="form-label">Período</label>
                 <div class="input-group">
