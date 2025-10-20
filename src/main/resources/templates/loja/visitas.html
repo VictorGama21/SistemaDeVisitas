@@ -112,8 +112,8 @@
                         th:classappend="${range == 'ontem'} ? ' active'">Ontem</button>
                 <a class="btn btn-link btn-sm" th:href="@{/loja/visitas}">Limpar filtros</a>
               </div>
-            </div>
             <form id="visitsFilters" method="get" th:action="@{/loja/visitas}" class="row g-3 align-items-end">
+            </div>
               <div class="col-12 col-lg-5">
                 <label class="form-label">Período</label>
                 <div class="input-group">
