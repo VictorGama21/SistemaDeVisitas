@@ -160,7 +160,7 @@ public class LojaVisitaController {
       normalizedEnd = swap;
     }
 
-    List<Visit> storeVisits = new ArrayList<>(visits.findByStoreOrderByScheduledDateDesc(store));
+    List<Visit> storeVisits = new ArrayList<>(visits.findAllByStores_IdOrderByScheduledDateDesc(store.getId()));
 
     if (normalizedStart != null) {
       LocalDate finalStart = normalizedStart;
