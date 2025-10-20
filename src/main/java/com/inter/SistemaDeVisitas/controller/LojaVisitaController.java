@@ -160,7 +160,7 @@ public class LojaVisitaController {
       normalizedEnd = swap;
     }
 
-    List<Visit> storeVisits = new ArrayList<>(visits.findAllByStores_IdOrderByScheduledDateDesc(store.getId()));
+    List<Visit> storeVisits = new ArrayList<>(visits.findByStoreOrderByScheduledDateAsc(store));
 
     if (normalizedStart != null) {
       LocalDate finalStart = normalizedStart;
@@ -375,11 +375,19 @@ public class LojaVisitaController {
     }
 
     VisitStatus previousStatus = visit.getStatus();
+    String previousComment = visit.getComment();
+    Integer previousRating = visit.getRating();
+    String normalizedComment = StringUtils.hasText(comment) ? comment.trim() : null;
+
     visit.setStatus(status);
-    visit.setComment(StringUtils.hasText(comment) ? comment.trim() : null);
+    visit.setComment(normalizedComment);
     visit.setRating(rating);
 
-    if (previousStatus != status) {
+    boolean statusChanged = previousStatus != status;
+    boolean feedbackChanged = !Objects.equals(previousComment, normalizedComment)
+        || !Objects.equals(previousRating, rating);
+
+    if (statusChanged || feedbackChanged) {
       visit.setLastStatusUpdatedBy(current);
       visit.setLastStatusUpdatedAt(Instant.now());
     }
