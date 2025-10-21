@@ -35,3 +35,74 @@ A aplicação permite o registro, monitoramento e exportação de relatórios da
 
 ## 🧭 Estrutura do Projeto
 
+SistemaDeVisitas/
+├── src/
+│ ├── main/
+│ │ ├── java/com/inter/SistemaDeVisitas/
+│ │ │ ├── controller/
+│ │ │ ├── entity/
+│ │ │ ├── repo/
+│ │ │ ├── service/
+│ │ │ └── config/
+│ │ └── resources/
+│ │ ├── static/
+│ │ ├── templates/
+│ │ └── db/migration/
+│ └── test/
+├── pom.xml
+└── README.md
+
+
+
+---
+
+## ⚙️ Como Executar Localmente
+
+1. **Clonar o repositório**
+   ```bash
+   git clone https://github.com/seuusuario/sistema-de-visitas.git
+   cd sistema-de-visitas
+
+   Configurar o banco de dados PostgreSQL
+
+CREATE DATABASE sistema_visitas;
+
+
+Editar o arquivo application.properties
+
+spring.datasource.url=jdbc:postgresql://localhost:5432/sistema_visitas
+spring.datasource.username=seu_usuario
+spring.datasource.password=sua_senha
+spring.jpa.hibernate.ddl-auto=none
+spring.flyway.enabled=true
+
+Executar o projeto
+
+mvn spring-boot:run
+
+
+Acesse: http://localhost:8080
+
+
+🔐 Usuários e Permissões
+Função	Permissões
+Admin	Cadastra usuários, lojas e gerencia visitas, Conferência	Visualiza relatórios e exporta dados
+loja	Registra visitas e adiciona observações, Conferência	Visualiza relatórios e exporta dados
+
+🛠️ Próximas Atualizações
+
+Integração com API de relatórios BI
+
+Dashboard interativo com gráficos
+
+Módulo mobile com registro via QR Code
+
+Painel de indicadores por gestor
+
+✨ Créditos
+
+Desenvolvido e mantido por
+Victor Gama/ turma ads1  – | Tecnologia de Varejo
+📍 Pernambuco / Alagoas
+📧 victormanuelgama21@gmail.com
+
