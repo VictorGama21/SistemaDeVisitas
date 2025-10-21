@@ -1,4 +1,4 @@
-# 🧾 Sistema de Visity
+# 🧾 Visity
 
 Um sistema web desenvolvido em **Spring Boot 3.5.5** para o controle e acompanhamento de visitas às lojas da rede Quitandaria e unidades do Grupo Verdão.  
 A aplicação permite o registro, monitoramento e exportação de relatórios das visitas realizadas por gestores e equipes internas.
