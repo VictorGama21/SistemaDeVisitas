@@ -102,7 +102,7 @@ Painel de indicadores por gestor
 ✨ Créditos
 
 Desenvolvido e mantido por
-Victor Gama/ turma ads1  – | Tecnologia de Varejo
+Turma ADS 1 – | Tecnologia de Varejo
 📍 Pernambuco / Alagoas
 📧 victormanuelgama21@gmail.com
 
