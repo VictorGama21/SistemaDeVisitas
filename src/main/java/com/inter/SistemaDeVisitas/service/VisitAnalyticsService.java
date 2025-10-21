@@ -1,8 +1,5 @@
 package com.inter.SistemaDeVisitas.service;
 
-import com.inter.SistemaDeVisitas.entity.Store;
-import com.inter.SistemaDeVisitas.entity.Visit;
-import com.inter.SistemaDeVisitas.entity.VisitModality;
 import com.inter.SistemaDeVisitas.entity.VisitStatus;
 import com.inter.SistemaDeVisitas.repo.VisitRepository;
 import org.springframework.stereotype.Service;
@@ -38,22 +35,40 @@ public class VisitAnalyticsService {
     }
 
     List<Visit> loaded;
-    if (store != null) {
-      if (effectiveStart != null || effectiveEnd != null) {
-        loaded = visitRepository.findByStoreAndDateRange(store, effectiveStart, effectiveEnd);
-      } else {
-        loaded = visitRepository.findByStoreOrderByScheduledDateAsc(store);
-      }
-    } else if (effectiveStart != null || effectiveEnd != null) {
-      loaded = visitRepository.findByStoreAndDateRange(null, effectiveStart, effectiveEnd);
-    } else {
+    if (store == null && effectiveStart == null && effectiveEnd == null) {
       loaded = visitRepository.findTop10ByOrderByScheduledDateDesc();
+    } else {
+      loaded = visitRepository.findByStoreAndDateRange(store, effectiveStart, effectiveEnd);
     }
 
-    if (loaded == null || loaded.isEmpty()) {
+    if (loaded.isEmpty()) {
       return List.of();
     }
 
+    List<Visit> filteredByDate = new ArrayList<>(loaded.size());
+    for (Visit visit : loaded) {
+      LocalDate scheduled = visit.getScheduledDate();
+      if (scheduled == null) {
+        filteredByDate.add(visit);
+        continue;
+      }
+      if (effectiveStart != null && scheduled.isBefore(effectiveStart)) {
+        continue;
+      }
+      if (effectiveEnd != null && scheduled.isAfter(effectiveEnd)) {
+        continue;
+      }
+      filteredByDate.add(visit);
+    }
+
+    return filteredByDate;
+  }
+
+  public List<Visit> applyFilters(List<Visit> visits, VisitFilterCriteria criteria) {
+    if (visits == null || visits.isEmpty()) {
+      return List.of();
+    }
+    
     List<Visit> filteredByDate = new ArrayList<>(loaded.size());
     for (Visit visit : loaded) {
       LocalDate scheduled = visit.getScheduledDate();
