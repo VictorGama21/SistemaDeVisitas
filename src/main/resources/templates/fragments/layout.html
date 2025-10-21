@@ -7,7 +7,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title th:text="${pageTitle} ?: 'Sistema de Visitas'">Sistema de Visitas</title>
+    <title th:text="${pageTitle} ?: 'Visity — Sistema de Visitas'">Visity — Sistema de Visitas</title>
 
     <!-- Bootstrap e CSS custom -->
     <link rel="stylesheet"
@@ -19,7 +19,11 @@
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark" style="background:#2e7d32;"> <!-- Verde Sankhya -->
       <div class="container-fluid">
-        <a class="navbar-brand fw-semibold" th:href="@{/home}">Sistema de Visitas</a>
+        <a class="navbar-brand d-flex align-items-center gap-2" th:href="@{/home}">
+          <img th:src="@{/img/visity-logo.svg}" src="/img/visity-logo.svg" alt="Logotipo Visity" width="36" height="36"
+               class="rounded-circle shadow-sm">
+          <span class="fw-semibold">Visity</span>
+        </a>
 
         <form class="d-none d-md-flex" role="search">
           <input class="form-control" type="search" placeholder="Pesquisar..." aria-label="Search">
@@ -45,9 +49,6 @@
             <a th:href="@{/home}" class="list-group-item list-group-item-action">
               Dashboard
             </a>
-
-            <!-- Menu da loja -->
-            <div sec:authorize="hasRole('LOJA')">
               <div class="list-group-item small text-muted">Operação</div>
               <a th:href="@{/loja/visitas}" class="list-group-item list-group-item-action">
                 Minhas visitas
