@@ -12,14 +12,19 @@
   border-radius: 16px;
 }
 
-/* Bolinha com “logo” SV (placeholder) */
-.brand-circle{
-  width: 64px; height: 64px;
+/* Marca Visity no formulário de login */
+.brand-logo{
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
-  background: var(--sv-green);
-  display:flex; align-items:center; justify-content:center;
-  color:#fff; font-weight:700; letter-spacing:1px;
+  overflow: hidden;
   box-shadow: 0 8px 18px rgba(46,139,87,.25);
+}
+
+.brand-logo img{
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 /* Barra “OU” */
@@ -47,18 +52,7 @@
 }
 
 /* Botões */
-.btn-success{
-  background: var(--sv-green);
-  border-color: var(--sv-green);
-}
-.btn-success:hover{
-  background: var(--sv-green-700);
-  border-color: var(--sv-green-700);
-}
-.btn-outline-success{
-  color: var(--sv-green);
-  border-color: var(--sv-green);
-}
+@@ -62,56 +67,53 @@
 .btn-outline-success:hover{
   background: var(--sv-green);
   border-color: var(--sv-green);
@@ -84,12 +78,9 @@
 }
 /* === ajustes finais === */
 
-/* 1) Centralizar o “SV” */
-.brand-circle{
-  margin: 0 auto 12px;       /* centraliza o círculo */
-  display: flex;              /* já tem no seu css, mas garantimos */
-  justify-content: center;
-  align-items: center;
+/* 1) Centralizar o logo */
+.brand-logo{
+  margin: 0 auto 12px;
 }
 
 /* 2) "OU" centralizado com linhas dos dois lados */
