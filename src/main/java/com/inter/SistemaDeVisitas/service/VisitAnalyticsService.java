@@ -28,7 +28,7 @@ public class VisitAnalyticsService {
   }
 
   public List<Visit> loadVisits(Store store, LocalDate start, LocalDate end) {
-@@ -44,96 +49,123 @@ public class VisitAnalyticsService {
+  public class VisitAnalyticsService {
 
     List<Visit> filteredByDate = new ArrayList<>(loaded.size());
     for (Visit visit : loaded) {
