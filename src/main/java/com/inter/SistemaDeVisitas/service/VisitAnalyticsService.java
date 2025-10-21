@@ -1,3 +1,8 @@
+package com.inter.SistemaDeVisitas.service;
+
+import com.inter.SistemaDeVisitas.entity.Store;
+import com.inter.SistemaDeVisitas.entity.Visit;
+import com.inter.SistemaDeVisitas.entity.VisitModality;
 import com.inter.SistemaDeVisitas.entity.VisitStatus;
 import com.inter.SistemaDeVisitas.repo.VisitRepository;
 import org.springframework.stereotype.Service;
@@ -23,24 +28,7 @@ public class VisitAnalyticsService {
   }
 
   public List<Visit> loadVisits(Store store, LocalDate start, LocalDate end) {
-    List<Visit> loaded;
-
-    if (store != null && start == null && end == null) {
-      loaded = new ArrayList<>(visitRepository.findByStoreOrderByScheduledDateAsc(store));
-    } else {
-      loaded = new ArrayList<>(visitRepository.findByStoreAndDateRange(store, start, end));
-    }
-
-    if (loaded.isEmpty()) {
-      return List.of();
-    }
-
-    LocalDate effectiveStart = start;
-    LocalDate effectiveEnd = end;
-
-    if (effectiveStart == null && effectiveEnd == null) {
-      return loaded;
-    }
+@@ -44,96 +49,123 @@ public class VisitAnalyticsService {
 
     List<Visit> filteredByDate = new ArrayList<>(loaded.size());
     for (Visit visit : loaded) {
@@ -66,30 +54,33 @@ public class VisitAnalyticsService {
       return List.of();
     }
 
+    VisitFilterCriteria effectiveCriteria = criteria != null ? criteria : VisitFilterCriteria.builder().build();
+
     List<Visit> filtered = new ArrayList<>();
     for (Visit visit : visits) {
-      if (!matchesStatus(criteria.getStatuses(), visit.getStatus())) {
+      if (!matchesStatus(effectiveCriteria.getStatuses(), visit.getStatus())) {
         continue;
       }
-      if (!matchesModality(criteria.getModalities(), visit.getModality())) {
+      if (!matchesModality(effectiveCriteria.getModalities(), visit.getModality())) {
         continue;
       }
-      if (!matchesBuyer(criteria.getBuyerId(), visit)) {
+      if (!matchesBuyer(effectiveCriteria.getBuyerId(), visit)) {
         continue;
       }
-      if (!matchesSupplier(criteria.getSupplierId(), visit)) {
+      if (!matchesSupplier(effectiveCriteria.getSupplierId(), visit)) {
         continue;
       }
-      if (!matchesSegment(criteria.getSegmentId(), visit)) {
+      if (!matchesSegment(effectiveCriteria.getSegmentId(), visit)) {
         continue;
       }
-      if (!matchesDay(criteria.getDayOfWeek(), visit.getScheduledDate())) {
+      if (!matchesDay(effectiveCriteria.getDayOfWeek(), visit.getScheduledDate())) {
         continue;
       }
       filtered.add(visit);
     }
 
-    filtered.sort(Comparator.comparing(Visit::getScheduledDate, Comparator.nullsLast(Comparator.naturalOrder())).reversed()
+    filtered.sort(Comparator
+        .comparing(Visit::getScheduledDate, Comparator.nullsLast(Comparator.naturalOrder())).reversed()
         .thenComparing(Visit::getId, Comparator.nullsLast(Comparator.reverseOrder())));
     return filtered;
   }
@@ -111,7 +102,7 @@ public class VisitAnalyticsService {
     return summary;
   }
 
-  public NavigaMap<LocalDate, Long> summarizeDaily(List<Visit> visits) {
+  public NavigableMap<LocalDate, Long> summarizeDaily(List<Visit> visits) {
     NavigableMap<LocalDate, Long> summary = new TreeMap<>();
     if (visits == null) {
       return summary;
@@ -137,3 +128,27 @@ public class VisitAnalyticsService {
     if (buyerId == null) {
       return true;
     }
+    return visit.getBuyer() != null && Objects.equals(visit.getBuyer().getId(), buyerId);
+  }
+
+  private boolean matchesSupplier(Long supplierId, Visit visit) {
+    if (supplierId == null) {
+      return true;
+    }
+    return visit.getSupplier() != null && Objects.equals(visit.getSupplier().getId(), supplierId);
+  }
+
+  private boolean matchesSegment(Long segmentId, Visit visit) {
+    if (segmentId == null) {
+      return true;
+    }
+    return visit.getSegment() != null && Objects.equals(visit.getSegment().getId(), segmentId);
+  }
+
+  private boolean matchesDay(DayOfWeek dayOfWeek, LocalDate scheduledDate) {
+    if (dayOfWeek == null || scheduledDate == null) {
+      return true;
+    }
+    return scheduledDate.getDayOfWeek() == dayOfWeek;
+  }
+}
