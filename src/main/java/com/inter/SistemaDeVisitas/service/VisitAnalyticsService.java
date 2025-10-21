@@ -1,5 +1,9 @@
 package com.inter.SistemaDeVisitas.service;
 
+
+import com.inter.SistemaDeVisitas.entity.Store;
+import com.inter.SistemaDeVisitas.entity.Visit;
+import com.inter.SistemaDeVisitas.entity.VisitModality;
 import com.inter.SistemaDeVisitas.entity.VisitStatus;
 import com.inter.SistemaDeVisitas.repo.VisitRepository;
 import org.springframework.stereotype.Service;
@@ -45,30 +49,6 @@ public class VisitAnalyticsService {
       return List.of();
     }
 
-    List<Visit> filteredByDate = new ArrayList<>(loaded.size());
-    for (Visit visit : loaded) {
-      LocalDate scheduled = visit.getScheduledDate();
-      if (scheduled == null) {
-        filteredByDate.add(visit);
-        continue;
-      }
-      if (effectiveStart != null && scheduled.isBefore(effectiveStart)) {
-        continue;
-      }
-      if (effectiveEnd != null && scheduled.isAfter(effectiveEnd)) {
-        continue;
-      }
-      filteredByDate.add(visit);
-    }
-
-    return filteredByDate;
-  }
-
-  public List<Visit> applyFilters(List<Visit> visits, VisitFilterCriteria criteria) {
-    if (visits == null || visits.isEmpty()) {
-      return List.of();
-    }
-    
     List<Visit> filteredByDate = new ArrayList<>(loaded.size());
     for (Visit visit : loaded) {
       LocalDate scheduled = visit.getScheduledDate();
