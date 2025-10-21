@@ -224,10 +224,12 @@ public class AdminVisitController {
         int fromIndex = Math.min(currentPage * pageSize, totalVisits);
         int toIndex = Math.min(fromIndex + pageSize, totalVisits);
         List<Visit> pageContent = filteredVisits.subList(fromIndex, toIndex);
+        List<Visit> detailedVisits = List.copyOf(filteredVisits);
 
         model.addAttribute("stores", storeList);
         model.addAttribute("availableStores", activeStores);
         model.addAttribute("visits", pageContent);
+        model.addAttribute("detailedVisits", detailedVisits);
         model.addAttribute("selectedStore", context.store());
         model.addAttribute("startDate", effectiveStart);
         model.addAttribute("endDate", effectiveEnd);
