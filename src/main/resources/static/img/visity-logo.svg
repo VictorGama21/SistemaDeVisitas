@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-labelledby="title desc">
+  <title id="title">Logotipo Visity</title>
+  <desc id="desc">Letra V estilizada dentro de um círculo verde com gradiente.</desc>
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3cc17c"/>
+      <stop offset="100%" stop-color="#1b6e3e"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#c8f0da" stop-opacity="0.4"/>
+    </linearGradient>
+  </defs>
+  <circle cx="60" cy="60" r="56" fill="url(#grad)"/>
+  <path d="M30 32h18l16 44 16-44h18l-31 74h-6z" fill="#fff" opacity="0.95"/>
+  <path d="M36 30a40 40 0 0 1 64 44" fill="none" stroke="url(#accent)" stroke-width="6" stroke-linecap="round"/>
+</svg>
