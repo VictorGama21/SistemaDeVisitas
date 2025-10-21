@@ -28,7 +28,31 @@ public class VisitAnalyticsService {
   }
 
   public List<Visit> loadVisits(Store store, LocalDate start, LocalDate end) {
-  public class VisitAnalyticsService {
+    LocalDate effectiveStart = start;
+    LocalDate effectiveEnd = end;
+
+    if (effectiveStart != null && effectiveEnd != null && effectiveEnd.isBefore(effectiveStart)) {
+      LocalDate swap = effectiveStart;
+      effectiveStart = effectiveEnd;
+      effectiveEnd = swap;
+    }
+
+    List<Visit> loaded;
+    if (store != null) {
+      if (effectiveStart != null || effectiveEnd != null) {
+        loaded = visitRepository.findByStoreAndDateRange(store, effectiveStart, effectiveEnd);
+      } else {
+        loaded = visitRepository.findByStoreOrderByScheduledDateAsc(store);
+      }
+    } else if (effectiveStart != null || effectiveEnd != null) {
+      loaded = visitRepository.findByStoreAndDateRange(null, effectiveStart, effectiveEnd);
+    } else {
+      loaded = visitRepository.findTop10ByOrderByScheduledDateDesc();
+    }
+
+    if (loaded == null || loaded.isEmpty()) {
+      return List.of();
+    }
 
     List<Visit> filteredByDate = new ArrayList<>(loaded.size());
     for (Visit visit : loaded) {
