@@ -188,7 +188,91 @@ public class LojaVisitaController {
     selectedStatuses.forEach(criteriaBuilder::addStatus);
     if (selectedDay != null) {
       criteriaBuilder.dayOfWeek(selectedDay);
-public class LojaVisitaController {
+}
+    VisitFilterCriteria criteria = criteriaBuilder.build();
+
+    List<Visit> loadedVisits = visitAnalytics.loadVisits(store, normalizedStart, normalizedEnd);
+    List<Visit> filteredVisits = visitAnalytics.applyFilters(loadedVisits, criteria);
+
+    EnumMap<VisitStatus, Long> statusSummary = visitAnalytics.summarizeByStatus(filteredVisits);
+    NavigableMap<LocalDate, Long> dailySummary = visitAnalytics.summarizeDaily(filteredVisits);
+
+    long totalVisits = filteredVisits.size();
+    long completedCount = statusSummary.getOrDefault(VisitStatus.COMPLETED, 0L);
+    long pendingCount = statusSummary.getOrDefault(VisitStatus.PENDING, 0L);
+    long noShowCount = statusSummary.getOrDefault(VisitStatus.NO_SHOW, 0L);
+    long reopenedCount = statusSummary.getOrDefault(VisitStatus.REOPENED, 0L);
+    long cancelledCount = statusSummary.getOrDefault(VisitStatus.CANCELLED, 0L);
+    double completionRate = totalVisits > 0 ? (completedCount * 100.0) / totalVisits : 0.0;
+
+    long todayCount = filteredVisits.stream()
+        .filter(visit -> Objects.equals(visit.getScheduledDate(), today))
+        .count();
+    long yesterdayCount = filteredVisits.stream()
+        .filter(visit -> Objects.equals(visit.getScheduledDate(), today.minusDays(1)))
+        .count();
+
+    List<String> statusChartLabels = Arrays.stream(VisitStatus.values())
+        .map(VisitStatus::getLabel)
+        .collect(Collectors.toList());
+    List<Long> statusChartValues = Arrays.stream(VisitStatus.values())
+        .map(status -> statusSummary.getOrDefault(status, 0L))
+        .collect(Collectors.toList());
+
+    DateTimeFormatter chartDateFormatter = DateTimeFormatter.ofPattern("dd/MM");
+    List<String> dailyChartLabels = dailySummary.keySet().stream()
+        .map(chartDateFormatter::format)
+        .collect(Collectors.toList());
+    List<Long> dailyChartValues = new ArrayList<>(dailySummary.values());
+
+    long overduePendingCount = visits.countByStoreAndStatusBefore(store, VisitStatus.PENDING, today);
+    boolean hasOverduePending = overduePendingCount > 0;
+
+    return new StoreVisitPageData(
+        filteredVisits,
+        selectedStatuses,
+        selectedDay,
+        dayFilter == null || dayFilter.isBlank() ? "todos" : dayFilter,
+        normalizedRange,
+        normalizedStart,
+        normalizedEnd,
+        totalVisits,
+        completedCount,
+        pendingCount,
+        noShowCount,
+        reopenedCount,
+        cancelledCount,
+        completionRate,
+        todayCount,
+        yesterdayCount,
+        statusChartLabels,
+        statusChartValues,
+        dailyChartLabels,
+        dailyChartValues,
+        hasOverduePending,
+        overduePendingCount,
+        criteria);
+  }
+
+  private record StoreVisitPageData(List<Visit> visits,
+                                    Set<VisitStatus> selectedStatuses,
+                                    DayOfWeek selectedDay,
+                                    String rawDayFilter,
+                                    String range,
+                                    LocalDate startDate,
+                                    LocalDate endDate,
+                                    long totalVisits,
+                                    long completedCount,
+                                    long pendingCount,
+                                    long noShowCount,
+                                    long reopenedCount,
+                                    long cancelledCount,
+                                    double completionRate,
+                                    long todayCount,
+                                    long yesterdayCount,
+                                    List<String> statusChartLabels,
+                                    List<Long> statusChartValues,
+                                    List<String> dailyChartLabels,
                                     List<Long> dailyChartValues,
                                     boolean hasOverduePending,
                                     long overduePendingCount,
